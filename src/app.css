@@ -1,0 +1,87 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-go-dark: #0f172a;
+  --color-go-darker: #0a0f1e;
+  --color-go-card: #1e293b;
+  --color-go-border: #334155;
+  --color-go-accent: #06b6d4;
+  --color-go-accent-hover: #22d3ee;
+  --color-go-success: #22c55e;
+  --color-go-danger: #ef4444;
+  --color-go-info: #3b82f6;
+  --color-go-warning: #eab308;
+  --color-go-text: #f1f5f9;
+  --color-go-muted: #94a3b8;
+}
+
+@layer base {
+  body {
+    @apply bg-go-darker text-go-text font-sans antialiased;
+  }
+
+  ::selection {
+    @apply bg-go-accent/30 text-white;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-go-accent hover:bg-go-accent-hover text-go-darker font-bold py-3 px-6 rounded-lg transition-all duration-200 cursor-pointer inline-flex items-center gap-2 text-sm uppercase tracking-wider;
+  }
+
+  .btn-secondary {
+    @apply border border-go-border hover:border-go-accent text-go-muted hover:text-go-accent py-3 px-6 rounded-lg transition-all duration-200 cursor-pointer inline-flex items-center gap-2 text-sm;
+  }
+
+  .btn-danger {
+    @apply bg-go-danger/20 hover:bg-go-danger/40 text-go-danger border border-go-danger/30 font-bold py-3 px-6 rounded-lg transition-all duration-200 cursor-pointer inline-flex items-center gap-2 text-sm;
+  }
+
+  .card {
+    @apply bg-go-card border border-go-border rounded-xl p-6;
+  }
+
+  .card-interactive {
+    @apply bg-go-card border border-go-border rounded-xl p-6 hover:border-go-accent/50 transition-all duration-300 cursor-pointer;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold;
+  }
+
+  .code-block {
+    @apply bg-go-darker border border-go-border rounded-lg p-4 font-mono text-sm overflow-x-auto;
+  }
+
+  .glow-accent {
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+  }
+
+  .fade-in {
+    animation: fade-in 0.5s ease-out;
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .slide-in {
+    animation: slide-in 0.3s ease-out;
+  }
+
+  @keyframes slide-in {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 5px rgba(6, 182, 212, 0.2); }
+    50% { box-shadow: 0 0 20px rgba(6, 182, 212, 0.4); }
+  }
+}
