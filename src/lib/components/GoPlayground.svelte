@@ -11,6 +11,8 @@
   let output = $state('');
   let running = $state(false);
   let error = $state(false);
+  let corsBlocked = $state(false);
+  let copied = $state(false);
 
   async function runCode() {
     running = true;
@@ -38,32 +40,29 @@
       } else {
         output = '(sin output)';
       }
-    } catch (e) {
-      output = 'Error de conexión. Intenta abrir en Go Playground directamente.';
-      error = true;
+    } catch {
+      corsBlocked = true;
     } finally {
       running = false;
     }
   }
 
-  function openInPlayground() {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = 'https://go.dev/_/share';
-    form.target = '_blank';
-    const input = document.createElement('textarea');
-    input.name = 'Snippet';
-    input.value = editorCode;
-    form.appendChild(input);
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
+  async function copyAndOpen() {
+    try {
+      await navigator.clipboard.writeText(editorCode);
+      copied = true;
+      setTimeout(() => copied = false, 3000);
+    } catch {
+      // clipboard API not available
+    }
+    window.open('https://go.dev/play/', '_blank');
   }
 
   function resetCode() {
     editorCode = code;
     output = '';
     error = false;
+    corsBlocked = false;
   }
 </script>
 
@@ -76,9 +75,6 @@
     <div class="flex gap-2">
       <button class="text-xs text-go-muted hover:text-go-text cursor-pointer" onclick={resetCode}>
         Reset
-      </button>
-      <button class="text-xs text-go-muted hover:text-go-accent cursor-pointer" onclick={openInPlayground}>
-        Abrir en go.dev ↗
       </button>
     </div>
   </div>
@@ -94,19 +90,39 @@
   ></textarea>
 
   <div class="flex items-center gap-3 mt-3">
-    <button
-      class="btn-primary text-xs"
-      onclick={runCode}
-      disabled={running}
-    >
-      {running ? '⏳ Ejecutando...' : '▶ Ejecutar'}
-    </button>
+    {#if corsBlocked}
+      <button class="btn-primary text-xs" onclick={copyAndOpen}>
+        {copied ? '✓ Copiado! Abriendo...' : '📋 Copiar y abrir en Go Playground'}
+      </button>
+      <span class="text-xs text-go-muted">El código se copia al portapapeles. Pégalo en el editor.</span>
+    {:else}
+      <button
+        class="btn-primary text-xs"
+        onclick={runCode}
+        disabled={running}
+      >
+        {running ? '⏳ Ejecutando...' : '▶ Ejecutar'}
+      </button>
+      <button class="text-xs text-go-muted hover:text-go-accent cursor-pointer" onclick={copyAndOpen}>
+        Abrir en Go Playground ↗
+      </button>
+    {/if}
   </div>
 
   {#if output}
     <div class="mt-3 rounded-lg p-3 font-mono text-sm {error ? 'bg-go-danger/10 border border-go-danger/30 text-go-danger' : 'bg-go-darker border border-go-border text-go-success'}">
       <p class="text-xs text-go-muted mb-1">{error ? 'Error:' : 'Output:'}</p>
       <pre class="whitespace-pre-wrap">{output}</pre>
+    </div>
+  {/if}
+
+  {#if corsBlocked && !output}
+    <div class="mt-3 rounded-lg p-3 bg-go-warning/10 border border-go-warning/30 text-sm">
+      <p class="text-go-warning font-semibold text-xs mb-1">Ejecución directa no disponible</p>
+      <p class="text-go-muted text-xs">
+        El API de Go Playground no permite peticiones desde este dominio (CORS).
+        Usa el botón para copiar el código y ejecutarlo en go.dev/play.
+      </p>
     </div>
   {/if}
 </div>
