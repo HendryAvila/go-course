@@ -3,13 +3,28 @@ export interface Source {
   url: string;
 }
 
+export type ActivityType =
+  | 'theory'
+  | 'worked-example'
+  | 'completion'
+  | 'fill-in-blank'
+  | 'debugging'
+  | 'quiz'
+  | 'playground'
+  | 'drag-drop'
+  | 'scenario'
+  | 'timer'
+  | 'mini-project';
+
 export interface ModuleInfo {
   id: number;
   title: string;
   subtitle: string;
   icon: string;
   duration: string;
+  /** @deprecated Use activities instead */
   type: string;
+  activities: ActivityType[];
   description: string;
   objectives: string[];
   sources: Source[];
@@ -21,11 +36,12 @@ export const modules: ModuleInfo[] = [
     title: 'Bienvenido a Go',
     subtitle: 'Historia, filosofía y tu primer programa',
     icon: '🐹',
-    duration: '20 min',
+    duration: '30 min',
     type: 'Teoría + Quiz + Playground',
+    activities: ['theory', 'worked-example', 'playground', 'completion', 'quiz'],
     description: 'Conoce Go: por qué fue creado, su filosofía de simplicidad, y escribe tu primer programa.',
     objectives: [
-      'Entender la historia y motivación detrás de Go',
+      'Entender la historia y motivación detrás de Go (2007→2025)',
       'Conocer la filosofía de diseño del lenguaje',
       'Escribir y ejecutar tu primer programa en Go',
       'Conocer el toolchain de Go (go run, go build, go fmt)',
@@ -42,8 +58,9 @@ export const modules: ModuleInfo[] = [
     title: 'Tipos, Variables y Constantes',
     subtitle: 'El sistema de tipos de Go',
     icon: '🔒',
-    duration: '25 min',
+    duration: '35 min',
     type: 'Teoría + Playground + Quiz',
+    activities: ['theory', 'worked-example', 'playground', 'completion', 'fill-in-blank', 'quiz'],
     description: 'Domina el sistema de tipos estático de Go: declaraciones, zero values, y el poder de iota.',
     objectives: [
       'Conocer los tipos básicos de Go (int, float64, string, bool, byte, rune)',
@@ -63,12 +80,13 @@ export const modules: ModuleInfo[] = [
     title: 'Control de Flujo',
     subtitle: 'if, for, switch y defer',
     icon: '🔄',
-    duration: '25 min',
+    duration: '35 min',
     type: 'Teoría + Playground + Quiz',
-    description: 'Go tiene un solo loop: for. Descubre cómo if, switch y defer hacen el código más limpio.',
+    activities: ['theory', 'worked-example', 'playground', 'completion', 'fill-in-blank', 'debugging', 'quiz'],
+    description: 'Go tiene un solo loop: for. Descubre cómo if, switch y defer hacen el código más limpio. Incluye range over integers (Go 1.22+).',
     objectives: [
       'Usar if con init statements',
-      'Dominar for como el único loop de Go',
+      'Dominar for como el único loop de Go (incluyendo range over integers)',
       'Entender switch sin break automático',
       'Comprender defer y su orden LIFO',
     ],
@@ -76,7 +94,7 @@ export const modules: ModuleInfo[] = [
       { name: 'The Go Programming Language - Donovan & Kernighan, Cap. 1', url: 'https://www.gopl.io/' },
       { name: 'Go by Example: For', url: 'https://gobyexample.com/for' },
       { name: 'Effective Go: Control structures', url: 'https://go.dev/doc/effective_go#control-structures' },
-      { name: 'Go Specification: Statements', url: 'https://go.dev/ref/spec#Statements' },
+      { name: 'Go 1.22 Release Notes: Range over integers', url: 'https://go.dev/blog/go1.22' },
     ],
   },
   {
@@ -84,14 +102,16 @@ export const modules: ModuleInfo[] = [
     title: 'Funciones',
     subtitle: 'Múltiples returns, closures y first-class',
     icon: '⚙️',
-    duration: '25 min',
+    duration: '35 min',
     type: 'Teoría + Playground + Quiz',
-    description: 'Las funciones en Go son ciudadanos de primera clase: múltiples retornos, closures, variadic args.',
+    activities: ['theory', 'worked-example', 'playground', 'completion', 'fill-in-blank', 'debugging', 'quiz'],
+    description: 'Las funciones en Go son ciudadanos de primera clase: múltiples retornos, closures, variadic args. Incluye builtins min/max (Go 1.21+).',
     objectives: [
       'Declarar funciones con múltiples valores de retorno',
       'Entender named returns y cuándo usarlos',
       'Crear funciones variadic',
       'Usar closures y funciones como valores',
+      'Conocer los builtins min, max y clear (Go 1.21+)',
     ],
     sources: [
       { name: 'The Go Programming Language - Donovan & Kernighan, Cap. 5', url: 'https://www.gopl.io/' },
@@ -105,20 +125,22 @@ export const modules: ModuleInfo[] = [
     title: 'Colecciones',
     subtitle: 'Arrays, Slices y Maps',
     icon: '📦',
-    duration: '30 min',
+    duration: '40 min',
     type: 'Teoría + DragDrop + Playground',
-    description: 'Slices son el corazón de Go. Aprende cómo funcionan internamente y por qué son tan poderosos.',
+    activities: ['theory', 'worked-example', 'playground', 'drag-drop', 'completion', 'debugging', 'quiz'],
+    description: 'Slices son el corazón de Go. Aprende cómo funcionan internamente. Incluye los paquetes slices y maps (Go 1.21+).',
     objectives: [
       'Diferenciar arrays (fijos) de slices (dinámicos)',
       'Entender la estructura interna de un slice (pointer, len, cap)',
       'Dominar append, copy y slice expressions',
       'Usar maps para almacenamiento clave-valor',
+      'Usar los paquetes slices y maps del stdlib (Go 1.21+)',
     ],
     sources: [
       { name: 'The Go Programming Language - Donovan & Kernighan, Cap. 4', url: 'https://www.gopl.io/' },
       { name: 'Go Blog: Go Slices usage and internals', url: 'https://go.dev/blog/slices-intro' },
       { name: 'Go by Example: Slices', url: 'https://gobyexample.com/slices' },
-      { name: 'Go by Example: Maps', url: 'https://gobyexample.com/maps' },
+      { name: 'Go 1.21: slices and maps packages', url: 'https://go.dev/blog/go1.21' },
     ],
   },
   {
@@ -126,8 +148,9 @@ export const modules: ModuleInfo[] = [
     title: 'Structs y Métodos',
     subtitle: 'Composición sobre herencia',
     icon: '🏗️',
-    duration: '25 min',
+    duration: '35 min',
     type: 'Teoría + Playground + Quiz',
+    activities: ['theory', 'worked-example', 'playground', 'completion', 'fill-in-blank', 'debugging', 'quiz'],
     description: 'Go no tiene clases. Usa structs y métodos para modelar tu dominio con composición.',
     objectives: [
       'Declarar y usar structs',
@@ -147,8 +170,9 @@ export const modules: ModuleInfo[] = [
     title: 'Interfaces y Polimorfismo',
     subtitle: 'El poder de las interfaces implícitas',
     icon: '🧩',
-    duration: '30 min',
+    duration: '40 min',
     type: 'Teoría + Scenario + Quiz',
+    activities: ['theory', 'worked-example', 'scenario', 'completion', 'debugging', 'mini-project', 'quiz'],
     description: 'Las interfaces en Go son implícitas: no hay "implements". Esto cambia todo sobre el polimorfismo.',
     objectives: [
       'Entender interfaces implícitas (duck typing estático)',
@@ -168,8 +192,9 @@ export const modules: ModuleInfo[] = [
     title: 'Manejo de Errores',
     subtitle: 'Errores como valores, no excepciones',
     icon: '🛡️',
-    duration: '25 min',
+    duration: '35 min',
     type: 'Teoría + Playground + Quiz',
+    activities: ['theory', 'worked-example', 'playground', 'completion', 'debugging', 'mini-project', 'quiz'],
     description: 'Go no tiene try/catch. Los errores son valores que se retornan y se manejan explícitamente.',
     objectives: [
       'Entender la interfaz error y el patrón if err != nil',
@@ -187,21 +212,22 @@ export const modules: ModuleInfo[] = [
   {
     id: 9,
     title: 'Paquetes, Módulos y Tooling',
-    subtitle: 'Organización y herramientas de Go',
+    subtitle: 'Organización, herramientas y logging estructurado',
     icon: '📁',
-    duration: '20 min',
+    duration: '35 min',
     type: 'Teoría + DragDrop + Quiz',
-    description: 'Aprende a organizar tu código en paquetes, manejar dependencias con modules, y usar las herramientas.',
+    activities: ['theory', 'worked-example', 'drag-drop', 'playground', 'completion', 'debugging', 'quiz'],
+    description: 'Organiza tu código en paquetes, gestiona dependencias con modules, y aprende log/slog (Go 1.21+).',
     objectives: [
       'Entender paquetes y visibilidad (mayúscula = exportado)',
       'Crear y gestionar Go modules (go.mod, go.sum)',
       'Usar las herramientas esenciales: go fmt, go vet, go test, go build',
-      'Organizar la estructura de un proyecto Go',
+      'Implementar structured logging con log/slog (Go 1.21+)',
     ],
     sources: [
       { name: 'Go Blog: Using Go Modules', url: 'https://go.dev/blog/using-go-modules' },
       { name: 'Go Modules Reference', url: 'https://go.dev/ref/mod' },
-      { name: 'How to Write Go Code', url: 'https://go.dev/doc/code' },
+      { name: 'Go Blog: Structured Logging with slog', url: 'https://go.dev/blog/slog' },
       { name: 'Effective Go: Package names', url: 'https://go.dev/doc/effective_go#package-names' },
     ],
   },
@@ -210,8 +236,9 @@ export const modules: ModuleInfo[] = [
     title: 'Concurrencia: Goroutines y Channels',
     subtitle: "Don't communicate by sharing memory",
     icon: '⚡',
-    duration: '35 min',
+    duration: '45 min',
     type: 'Teoría + Scenario + Playground',
+    activities: ['theory', 'worked-example', 'scenario', 'playground', 'completion', 'debugging', 'mini-project', 'quiz'],
     description: 'El superpoder de Go: goroutines livianas y channels para comunicación segura entre procesos.',
     objectives: [
       'Lanzar goroutines y entender su modelo de ejecución',
@@ -231,8 +258,9 @@ export const modules: ModuleInfo[] = [
     title: 'Concurrencia Avanzada',
     subtitle: 'Patterns, sync y context',
     icon: '🧬',
-    duration: '35 min',
+    duration: '45 min',
     type: 'Teoría + Scenario + Timer',
+    activities: ['theory', 'worked-example', 'scenario', 'timer', 'completion', 'debugging', 'mini-project', 'quiz'],
     description: 'Domina los patrones avanzados: WaitGroup, Mutex, context, y patterns como fan-out/fan-in.',
     objectives: [
       'Usar sync.WaitGroup y sync.Mutex para sincronización',
@@ -249,23 +277,25 @@ export const modules: ModuleInfo[] = [
   },
   {
     id: 12,
-    title: 'APIs REST y Testing',
-    subtitle: 'Construyendo y testeando APIs',
+    title: 'APIs REST, Testing y Go Moderno',
+    subtitle: 'Construyendo APIs, testing y Generics',
     icon: '🌐',
-    duration: '30 min',
+    duration: '50 min',
     type: 'Teoría + Quiz + Playground',
-    description: 'Construye APIs REST con net/http y aprende testing idiomático con table-driven tests.',
+    activities: ['theory', 'worked-example', 'playground', 'completion', 'debugging', 'mini-project', 'quiz'],
+    description: 'Construye APIs REST con net/http, testing idiomático, y una introducción a Generics (Go 1.18+) e iterators (Go 1.23+).',
     objectives: [
-      'Crear HTTP handlers con net/http',
+      'Crear HTTP handlers con net/http (incluyendo routing mejorado de Go 1.22)',
       'Codificar y decodificar JSON',
-      'Escribir tests con el paquete testing',
-      'Implementar table-driven tests y benchmarks',
+      'Escribir tests con el paquete testing y table-driven tests',
+      'Entender Generics: type parameters, constraints y patrones comunes',
+      'Conocer iterators con el paquete iter (Go 1.23+)',
     ],
     sources: [
       { name: 'Go Doc: Writing Web Applications', url: 'https://go.dev/doc/articles/wiki/' },
       { name: 'Go by Example: HTTP Server', url: 'https://gobyexample.com/http-server' },
       { name: 'Go by Example: Testing', url: 'https://gobyexample.com/testing-and-benchmarking' },
-      { name: 'Practical Go: Dave Cheney', url: 'https://dave.cheney.net/practical-go/presentations/qcon-china.html' },
+      { name: 'Go Blog: When To Use Generics', url: 'https://go.dev/blog/when-generics' },
     ],
   },
 ];

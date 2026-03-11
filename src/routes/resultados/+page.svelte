@@ -11,12 +11,29 @@
   let allCompleted = $derived(completedCount === totalModules);
   let totalMaxScore = $derived(Object.values($courseStore.modules).reduce((acc, m) => acc + m.maxScore, 0));
 
+  // Exercise stats
+  let exerciseEntries = $derived(Object.values($courseStore.exercises));
+  let exercisesCompleted = $derived(exerciseEntries.filter(e => e.completed).length);
+  let exercisePointsEarned = $derived(exerciseEntries.reduce((acc, e) => acc + e.score, 0));
+  let averageHints = $derived(
+    exerciseEntries.length > 0
+      ? (exerciseEntries.reduce((acc, e) => acc + e.hintsUsed, 0) / exerciseEntries.length).toFixed(1)
+      : '0'
+  );
+
+  // Review cards (Leitner) stats
+  let cardEntries = $derived(Object.values($courseStore.reviewCards));
+  let cardsBox1 = $derived(cardEntries.filter(c => c.box === 1).length);
+  let cardsBox2 = $derived(cardEntries.filter(c => c.box === 2).length);
+  let cardsBox3 = $derived(cardEntries.filter(c => c.box === 3).length);
+  let totalCards = $derived(cardEntries.length);
+
   const competencies = [
     { name: 'Fundamentos del Lenguaje', modules: [1, 2, 3, 4], icon: '🧱' },
     { name: 'Estructuras de Datos y Tipos', modules: [5, 6, 7], icon: '📦' },
     { name: 'Manejo de Errores y Organización', modules: [8, 9], icon: '🛡️' },
     { name: 'Concurrencia', modules: [10, 11], icon: '⚡' },
-    { name: 'APIs y Testing', modules: [12], icon: '🌐' },
+    { name: 'APIs, Testing y Go Moderno', modules: [12], icon: '🌐' },
   ];
 
   const resources = [
@@ -115,6 +132,68 @@
         </div>
       {/each}
     </div>
+  </div>
+
+  <!-- Exercise Progress -->
+  <div class="card mb-8 fade-in">
+    <h2 class="font-bold text-lg mb-4">Ejercicios Completados</h2>
+    {#if exercisesCompleted > 0}
+      <div class="grid sm:grid-cols-3 gap-4 mb-4">
+        <div class="text-center p-3 rounded-lg bg-go-darker">
+          <p class="text-2xl font-black text-go-accent">{exercisesCompleted}</p>
+          <p class="text-xs text-go-muted">Ejercicios resueltos</p>
+        </div>
+        <div class="text-center p-3 rounded-lg bg-go-darker">
+          <p class="text-2xl font-black text-go-accent">{exercisePointsEarned}</p>
+          <p class="text-xs text-go-muted">Puntos obtenidos</p>
+        </div>
+        <div class="text-center p-3 rounded-lg bg-go-darker">
+          <p class="text-2xl font-black text-go-accent">{averageHints}</p>
+          <p class="text-xs text-go-muted">Pistas promedio usadas</p>
+        </div>
+      </div>
+    {:else}
+      <p class="text-sm text-go-muted">Aun no has completado ejercicios. Completa los CodeChallenges en cada modulo para ver tus estadisticas.</p>
+    {/if}
+  </div>
+
+  <!-- Spaced Repetition -->
+  <div class="card mb-8 fade-in">
+    <h2 class="font-bold text-lg mb-4">Repaso Espaciado</h2>
+    {#if totalCards > 0}
+      <div class="grid sm:grid-cols-3 gap-4 mb-4">
+        <div class="text-center p-3 rounded-lg bg-go-darker">
+          <p class="text-2xl font-black text-red-400">{cardsBox1}</p>
+          <p class="text-xs text-go-muted">Caja 1 — Necesitan repaso</p>
+        </div>
+        <div class="text-center p-3 rounded-lg bg-go-darker">
+          <p class="text-2xl font-black text-yellow-400">{cardsBox2}</p>
+          <p class="text-xs text-go-muted">Caja 2 — Aprendiendo</p>
+        </div>
+        <div class="text-center p-3 rounded-lg bg-go-darker">
+          <p class="text-2xl font-black text-go-success">{cardsBox3}</p>
+          <p class="text-xs text-go-muted">Caja 3 — Dominadas</p>
+        </div>
+      </div>
+      <!-- Distribution bar -->
+      <div class="w-full h-4 rounded-full overflow-hidden flex">
+        {#if cardsBox1 > 0}
+          <div class="bg-red-400 h-full transition-all duration-500" style="width: {(cardsBox1 / totalCards) * 100}%"></div>
+        {/if}
+        {#if cardsBox2 > 0}
+          <div class="bg-yellow-400 h-full transition-all duration-500" style="width: {(cardsBox2 / totalCards) * 100}%"></div>
+        {/if}
+        {#if cardsBox3 > 0}
+          <div class="bg-go-success h-full transition-all duration-500" style="width: {(cardsBox3 / totalCards) * 100}%"></div>
+        {/if}
+      </div>
+      <div class="flex justify-between text-xs text-go-muted mt-1">
+        <span>Repaso urgente</span>
+        <span>Dominadas</span>
+      </div>
+    {:else}
+      <p class="text-sm text-go-muted">Aun no has revisado tarjetas. Usa las ReviewCards en cada modulo para activar el repaso espaciado.</p>
+    {/if}
   </div>
 
   <!-- Competencies -->

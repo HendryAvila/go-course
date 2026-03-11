@@ -7,6 +7,9 @@
   import BadgeNotification from '$lib/components/BadgeNotification.svelte';
   import Quiz from '$lib/components/Quiz.svelte';
   import GoPlayground from '$lib/components/GoPlayground.svelte';
+  import WorkedExample from '$lib/components/WorkedExample.svelte';
+  import CodeChallenge from '$lib/components/CodeChallenge.svelte';
+  import { exercises, workedExamples } from '$lib/data/exercises/module-1';
 
   const module = modules.find(m => m.id === 1)!;
   let showBadge = $state(false);
@@ -61,6 +64,7 @@ func main() {
     },
     {
       question: '¿Qué hace el comando "go fmt"?',
+      type: 'code' as const,
       options: [
         { text: 'Compila el programa', correct: false, explanation: '"go build" compila. "go fmt" formatea el código fuente.' },
         { text: 'Ejecuta los tests', correct: false, explanation: '"go test" ejecuta tests. "go fmt" se encarga del formato.' },
@@ -72,6 +76,7 @@ func main() {
     },
     {
       question: '¿Qué función es el punto de entrada de un programa Go?',
+      type: 'code' as const,
       options: [
         { text: 'func init()', correct: false, explanation: 'init() se ejecuta automáticamente al cargar un paquete, pero NO es el punto de entrada del programa.' },
         { text: 'func start()', correct: false, explanation: 'No existe una función start() especial en Go.' },
@@ -124,6 +129,9 @@ func main() {
         <li>&#8226; <strong class="text-go-text">2009</strong> - Anuncio público como open source</li>
         <li>&#8226; <strong class="text-go-text">2012</strong> - Go 1.0 con la promesa de compatibilidad</li>
         <li>&#8226; <strong class="text-go-text">2022</strong> - Go 1.18 introduce Generics</li>
+        <li>&#8226; <strong class="text-go-text">2023</strong> - Go 1.21: min/max builtins, log/slog, paquetes slices y maps</li>
+        <li>&#8226; <strong class="text-go-text">2024</strong> - Go 1.22: range over integers. Go 1.23: iterators (iter)</li>
+        <li>&#8226; <strong class="text-go-text">2025</strong> - Go 1.24: generic type aliases</li>
       </ul>
     </div>
   </section>
@@ -141,7 +149,7 @@ func main() {
         <p class="text-go-muted text-sm">Pocas keywords (25), una sola forma de hacer las cosas.</p>
       </div>
       <div class="bg-go-darker rounded-lg p-3">
-        <p class="text-go-accent font-semibold text-sm">Compilacion Rapida</p>
+        <p class="text-go-accent font-semibold text-sm">Compilación Rápida</p>
         <p class="text-go-muted text-sm">Compila a binarios nativos en segundos, no minutos.</p>
       </div>
       <div class="bg-go-darker rounded-lg p-3">
@@ -150,8 +158,15 @@ func main() {
       </div>
       <div class="bg-go-darker rounded-lg p-3">
         <p class="text-go-accent font-semibold text-sm">Garbage Collection</p>
-        <p class="text-go-muted text-sm">Manejo automatico de memoria sin sacrificar rendimiento.</p>
+        <p class="text-go-muted text-sm">Manejo automático de memoria sin sacrificar rendimiento.</p>
       </div>
+    </div>
+    <div class="bg-go-accent/5 border border-go-accent/20 rounded-lg p-3 mt-4">
+      <p class="text-go-accent font-semibold text-sm mb-1">Dato curioso</p>
+      <p class="text-go-muted text-sm">
+        Go tiene solo <strong class="text-go-text">25 keywords</strong>. Python tiene 35, Java tiene 67, C++ tiene más de 90.
+        Esto no es casualidad — es una decisión de diseño. Menos keywords = menos cosas que memorizar = menos formas de hacer lo mismo.
+      </p>
     </div>
   </section>
 
@@ -173,6 +188,13 @@ func main() {
       <li>&#8226; <strong class="text-go-text">import "fmt"</strong> - Importa el paquete de formato estándar</li>
       <li>&#8226; <strong class="text-go-text">func main()</strong> - La función que se ejecuta al correr el programa</li>
     </ul>
+    <div class="bg-go-danger/5 border border-go-danger/20 rounded-lg p-3 mt-4">
+      <p class="text-go-danger font-semibold text-sm mb-1">Error común</p>
+      <p class="text-go-muted text-sm">
+        Si importas un paquete y no lo usas, Go <strong class="text-go-text">no compila</strong>. No es un warning — es un error.
+        Esto mantiene el código limpio: nada de imports muertos.
+      </p>
+    </div>
   </section>
 
   <!-- Toolchain -->
@@ -183,25 +205,61 @@ func main() {
     </p>
     {@html `<pre class="bg-go-darker rounded-lg p-4 font-mono text-sm overflow-x-auto"><code><span class="text-go-accent">go run</span> main.go      <span class="text-go-muted"># Compila y ejecuta en un solo paso</span>
 <span class="text-go-accent">go build</span> main.go    <span class="text-go-muted"># Compila a un binario ejecutable</span>
-<span class="text-go-accent">go fmt</span> ./...         <span class="text-go-muted"># Formatea TODO el codigo (un solo estilo)</span>
-<span class="text-go-accent">go vet</span> ./...         <span class="text-go-muted"># Detecta errores comunes en el codigo</span>
+<span class="text-go-accent">go fmt</span> ./...         <span class="text-go-muted"># Formatea TODO el código (un solo estilo)</span>
+<span class="text-go-accent">go vet</span> ./...         <span class="text-go-muted"># Detecta errores comunes en el código</span>
 <span class="text-go-accent">go test</span> ./...        <span class="text-go-muted"># Ejecuta todos los tests</span>
-<span class="text-go-accent">go mod init</span> ejemplo  <span class="text-go-muted"># Inicializa un nuevo modulo</span></code></pre>`}
+<span class="text-go-accent">go mod init</span> ejemplo  <span class="text-go-muted"># Inicializa un nuevo módulo</span></code></pre>`}
+    <p class="text-go-muted text-sm mt-3">
+      Piensa en <code class="text-go-accent">go fmt</code> como un superpoder: en Go no existen debates sobre estilo
+      (tabs vs spaces, dónde poner las llaves). El formateador decide por todos. Esto ahorra horas de code review.
+    </p>
+  </section>
+
+  <!-- Worked Examples -->
+  <section class="mb-6">
+    <h2 class="text-xl font-bold mb-4">Ejemplos Guiados</h2>
+    <p class="text-go-muted mb-4">
+      Sigue cada ejemplo paso a paso. Revela los pasos a tu ritmo y experimenta con el código al final.
+    </p>
+    <div class="space-y-6">
+      {#each workedExamples as we}
+        <WorkedExample
+          title={we.title}
+          description={we.description}
+          steps={we.steps}
+          playground={we.playground}
+          playgroundCode={we.playgroundCode}
+        />
+      {/each}
+    </div>
   </section>
 
   <!-- GoPlayground -->
   <section class="mb-6">
     <h2 class="text-xl font-bold mb-3">Tu Primer Programa</h2>
     <p class="text-go-muted mb-4">
-      Experimenta con el codigo. Modifica los mensajes, agrega nuevas lineas con
+      Experimenta con el código. Modifica los mensajes, agrega nuevas líneas con
       <code class="text-go-accent">fmt.Println()</code> y prueba
       <code class="text-go-accent">fmt.Printf()</code> con diferentes formatos.
     </p>
     <GoPlayground
       code={helloWorldCode}
       title="Hola Mundo en Go"
-      description="Presiona Ejecutar para ver tu primer programa Go en accion. Prueba modificarlo!"
+      description="Presiona Ejecutar para ver tu primer programa Go en acción. ¡Prueba modificarlo!"
     />
+  </section>
+
+  <!-- Code Challenges -->
+  <section class="mb-6">
+    <h2 class="text-xl font-bold mb-4">Desafíos de Código</h2>
+    <p class="text-go-muted mb-4">
+      Pon en práctica lo aprendido. Cada ejercicio sube de dificultad. Intenta resolverlos antes de usar las pistas.
+    </p>
+    <div class="space-y-6">
+      {#each exercises as exercise}
+        <CodeChallenge {exercise} onComplete={(id, score, hints) => courseStore.completeExercise(id, score, hints)} />
+      {/each}
+    </div>
   </section>
 
   <!-- Quiz -->

@@ -1,442 +1,334 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { courseStore, allBadges } from '$lib/stores/course';
   import { modules } from '$lib/data/modules';
   import ModuleNav from '$lib/components/ModuleNav.svelte';
   import SourcesSection from '$lib/components/SourcesSection.svelte';
   import VocabularyFloat from '$lib/components/VocabularyFloat.svelte';
   import BadgeNotification from '$lib/components/BadgeNotification.svelte';
-  import BranchingScenario from '$lib/components/BranchingScenario.svelte';
   import Quiz from '$lib/components/Quiz.svelte';
+  import GoPlayground from '$lib/components/GoPlayground.svelte';
+  import WorkedExample from '$lib/components/WorkedExample.svelte';
+  import CodeChallenge from '$lib/components/CodeChallenge.svelte';
+  import ReviewCards from '$lib/components/ReviewCards.svelte';
+  import { exercises, workedExamples } from '$lib/data/exercises/module-7';
+  import { reviewCards } from '$lib/data/exercises/review-cards';
 
-  const MODULE_ID = 7;
-  const BADGE_ID = 'interface-guru';
-  const mod = modules.find(m => m.id === MODULE_ID)!;
-
-  let scenarioCompleted = $state(false);
-  let scenarioScore = $state(0);
-  let quizCompleted = $state(false);
-  let quizScore = $state(0);
-  let quizTotal = $state(0);
+  const module = modules.find(m => m.id === 7)!;
   let showBadge = $state(false);
-  let earnedBadge = $state<typeof allBadges[0] | null>(null);
+  let earnedBadge = $state(allBadges.find(b => b.id === 'interface-guru')!);
 
-  onMount(() => {
-    courseStore.startModule(MODULE_ID);
-  });
+  const interfacePlaygroundCode = `package main
 
-  function checkCompletion() {
-    if (scenarioCompleted && quizCompleted) {
-      const totalScore = scenarioScore + quizScore;
-      const totalMax = 12 + quizTotal;
-      courseStore.completeModule(MODULE_ID, totalScore, totalMax);
-      const badge = allBadges.find(b => b.id === BADGE_ID);
-      if (badge) {
-        courseStore.unlockBadge(BADGE_ID);
-        earnedBadge = badge;
-        showBadge = true;
-      }
-    }
-  }
+import "fmt"
 
-  function handleScenarioComplete(score: number, maxScore: number) {
-    scenarioCompleted = true;
-    scenarioScore = score;
-    checkCompletion();
-  }
+// interface{} vacía — acepta CUALQUIER tipo
+func describir(i interface{}) {
+\tswitch v := i.(type) {
+\tcase int:
+\t\tfmt.Printf("Entero: %d\\n", v)
+\tcase string:
+\t\tfmt.Printf("String: %q\\n", v)
+\tcase bool:
+\t\tfmt.Printf("Booleano: %t\\n", v)
+\tdefault:
+\t\tfmt.Printf("Tipo desconocido: %v\\n", v)
+\t}
+}
 
-  function handleQuizComplete(score: number, total: number) {
-    quizCompleted = true;
-    quizScore = score;
-    quizTotal = total;
-    checkCompletion();
-  }
-
-  const scenarioNodes: Record<string, any> = {
-    start: {
-      id: 'start',
-      narrative: 'Estas disenando un sistema de notificaciones que debe enviar mensajes por Email, SMS y Push. Necesitas decidir como estructurar el codigo. Tienes un struct EmailSender con un metodo Send(message string) error. Ahora necesitas agregar SMS y Push. Como lo haces?',
-      choices: [
-        { text: 'Crear una interfaz Notifier con el metodo Send y hacer que cada tipo la implemente', nextId: 'interface-yes', points: 3, feedback: 'Excelente. Una interfaz Notifier permite polimorfismo: cualquier tipo con Send puede ser usado como Notifier.' },
-        { text: 'Meter todo en un solo struct gigante con un campo "tipo" para diferenciar', nextId: 'monolith', points: 0, feedback: 'Esto viola el principio Open/Closed. Cada nuevo canal requiere modificar el struct existente.' },
-        { text: 'Usar funciones sueltas: sendEmail(), sendSMS(), sendPush()', nextId: 'functions', points: 1, feedback: 'Funciona pero pierdes la capacidad de tratar todos los senders de forma uniforme.' },
-      ],
-    },
-    'interface-yes': {
-      id: 'interface-yes',
-      narrative: 'Bien. Has creado la interfaz Notifier. Ahora necesitas una funcion que envie a multiples canales. Que firma deberia tener?',
-      choices: [
-        { text: 'func BroadcastAll(notifiers []Notifier, msg string) error — acepta la interfaz', nextId: 'accept-interface', points: 3, feedback: 'Perfecto. "Accept interfaces, return structs" es el principio idomiatico en Go.' },
-        { text: 'func BroadcastAll(email *EmailSender, sms *SMSSender, push *PushSender, msg string) error', nextId: 'concrete-params', points: 1, feedback: 'Funciona pero cada nuevo canal requiere cambiar la firma. No es extensible.' },
-        { text: 'func BroadcastAll(senders []interface{}, msg string) error — usar interface{} vacio', nextId: 'empty-interface', points: 1, feedback: 'interface{} pierde type safety. Tendras que hacer type assertions inseguras adentro.' },
-      ],
-    },
-    'accept-interface': {
-      id: 'accept-interface',
-      narrative: 'Ahora una funcion retorna un notifier basado en la configuracion. Que deberia retornar?',
-      choices: [
-        { text: 'Retornar el struct concreto (*EmailSender, *SMSSender, etc.)', nextId: 'return-concrete', points: 3, feedback: '"Return structs": retornar tipos concretos da mas informacion al caller y evita acoplar a interfaces.' },
-        { text: 'Retornar la interfaz Notifier', nextId: 'return-interface', points: 2, feedback: 'Funciona, pero oculta el tipo concreto. En Go idiomatico se prefiere retornar el struct.' },
-        { text: 'Retornar interface{} para maxima flexibilidad', nextId: 'return-any', points: 0, feedback: 'interface{} obliga al caller a hacer type assertion. Pierdes toda seguridad de tipos.' },
-      ],
-    },
-    monolith: {
-      id: 'monolith',
-      narrative: 'Tu struct gigante tiene campos para email, sms, push y un campo Tipo string. Necesitas agregar soporte para Slack y Telegram. Que haces?',
-      choices: [
-        { text: 'Refactorizar a una interfaz y tipos separados', nextId: 'refactor-good', points: 3, feedback: 'Buena decision. Refactorizar a interfaces separa responsabilidades correctamente.' },
-        { text: 'Agregar mas campos al struct y mas cases al switch', nextId: 'outcome-bad', points: 0, feedback: 'El struct seguira creciendo sin control. Cada cambio afecta todo el sistema.' },
-      ],
-    },
-    functions: {
-      id: 'functions',
-      narrative: 'Tienes funciones sueltas. Ahora necesitas una funcion que reciba "cualquier sender" y lo use. Como lo resuelves?',
-      choices: [
-        { text: 'Definir una interfaz que todas las funciones cumplan', nextId: 'interface-yes', points: 2, feedback: 'Correcto. Las interfaces en Go se satisfacen implicitamente, solo necesitas que el tipo tenga los metodos.' },
-        { text: 'Usar un parametro interface{} y hacer type assertions', nextId: 'empty-interface', points: 0, feedback: 'interface{} no garantiza que el tipo tenga un metodo Send. Vas a tener panics en runtime.' },
-      ],
-    },
-    'concrete-params': {
-      id: 'concrete-params',
-      narrative: 'Tu funcion tiene parametros concretos. El equipo quiere agregar un WebhookSender. Que haces?',
-      choices: [
-        { text: 'Refactorizar para aceptar una interfaz Notifier', nextId: 'accept-interface', points: 2, feedback: 'Perfecto, ahora entiendes por que las interfaces hacen el codigo extensible.' },
-        { text: 'Agregar otro parametro a la funcion', nextId: 'outcome-bad', points: 0, feedback: 'La funcion va a tener 10 parametros eventualmente. No escala.' },
-      ],
-    },
-    'empty-interface': {
-      id: 'empty-interface',
-      narrative: 'Estas usando interface{} y haciendo type assertions. Un nuevo developer agrega un tipo que no tiene Send(). El codigo compila pero hace panic en runtime. Que aprendes?',
-      choices: [
-        { text: 'Definir una interfaz especifica con los metodos necesarios', nextId: 'return-concrete', points: 2, feedback: 'Exacto. Las interfaces con metodos dan validacion en tiempo de compilacion.' },
-        { text: 'Agregar un recover() para manejar el panic', nextId: 'outcome-bad', points: 0, feedback: 'recover() es un parche. El problema es de diseno, no de error handling.' },
-      ],
-    },
-    'refactor-good': {
-      id: 'refactor-good',
-      narrative: 'Refactorizaste bien.',
-      outcome: {
-        title: 'Buen refactoring',
-        description: 'Reconociste el problema del struct monolitico y refactorizaste a interfaces.',
-        score: 3,
-        maxScore: 12,
-        grade: 'good' as const,
-        lessons: [
-          'Las interfaces permiten polimorfismo sin herencia',
-          'Separar tipos concretos por responsabilidad es clave',
-          'Refactorizar a interfaces cuando detectas el patron',
-        ],
-      },
-    },
-    'return-concrete': {
-      id: 'return-concrete',
-      narrative: 'Has completado el diseno.',
-      outcome: {
-        title: 'Diseno idiomatico',
-        description: 'Aplicaste correctamente "Accept interfaces, return structs" y entiendes cuando usar cada patron.',
-        score: 9,
-        maxScore: 12,
-        grade: 'excellent' as const,
-        lessons: [
-          'Accept interfaces, return structs',
-          'Interfaces pequenas son mas componibles',
-          'Los tipos concretos retornados dan mas informacion al caller',
-          'La implementacion implicita es el superpoder de Go',
-        ],
-      },
-    },
-    'return-interface': {
-      id: 'return-interface',
-      narrative: 'Has completado el diseno.',
-      outcome: {
-        title: 'Buen approach con mejoras posibles',
-        description: 'Usas interfaces bien, pero retornar interfaces cuando no es necesario oculta informacion util.',
-        score: 7,
-        maxScore: 12,
-        grade: 'good' as const,
-        lessons: [
-          'Retornar structs concretos da mas informacion al caller',
-          'Solo retorna interfaces si hay una razon real de abstraccion',
-          'Accept interfaces, return structs es la regla idomiatica',
-        ],
-      },
-    },
-    'return-any': {
-      id: 'return-any',
-      narrative: 'Has completado el diseno.',
-      outcome: {
-        title: 'Demasiada flexibilidad',
-        description: 'Usar interface{} everywhere pierde la seguridad de tipos que Go ofrece.',
-        score: 3,
-        maxScore: 12,
-        grade: 'needs-work' as const,
-        lessons: [
-          'interface{} / any debe usarse con moderacion',
-          'Define interfaces especificas con los metodos que necesitas',
-          'La seguridad de tipos es una ventaja, no una limitacion',
-        ],
-      },
-    },
-    'outcome-bad': {
-      id: 'outcome-bad',
-      narrative: 'El diseno tiene problemas fundamentales.',
-      outcome: {
-        title: 'Oportunidad de mejora',
-        description: 'El approach elegido lleva a codigo fragil y dificil de extender. Las interfaces resuelven estos problemas.',
-        score: 1,
-        maxScore: 12,
-        grade: 'critical' as const,
-        lessons: [
-          'Las interfaces permiten extender sin modificar codigo existente (Open/Closed)',
-          'Evita structs monoliticos con campos para todos los casos',
-          'interface{} sin type safety causa panics en runtime',
-          'Revisa el principio "Accept interfaces, return structs"',
-        ],
-      },
-    },
-  };
+func main() {
+\tdescribir(42)
+\tdescribir("hola")
+\tdescribir(true)
+\tdescribir(3.14)
+}`;
 
   const quizQuestions = [
     {
-      question: 'En Go, como un tipo "implementa" una interfaz?',
+      question: '¿Cómo implementa un tipo una interfaz en Go?',
       options: [
-        { text: 'Usando la keyword "implements" como en Java', correct: false, explanation: 'Go no tiene keyword "implements". La implementacion es implicita.' },
-        { text: 'Implementando todos los metodos de la interfaz (implicitamente)', correct: true, explanation: 'Correcto. Si un tipo tiene todos los metodos que una interfaz declara, automaticamente la satisface. No se necesita declaracion explicita.' },
-        { text: 'Registrando el tipo en la interfaz con Register()', correct: false, explanation: 'No existe tal mecanismo en Go. La satisfaccion de interfaces es implicita.' },
-        { text: 'Heredando de la interfaz con struct embedding', correct: false, explanation: 'No se "hereda" de interfaces. Se implementan los metodos declarados en la interfaz.' },
+        { text: 'Usando la keyword "implements"', correct: false, explanation: 'Go no tiene keyword "implements". Las interfaces son implícitas.' },
+        { text: 'Automáticamente, al tener todos los métodos que la interfaz requiere', correct: true, explanation: '¡Correcto! Es "duck typing" estático: si un tipo tiene los métodos correctos, satisface la interfaz sin declararlo.' },
+        { text: 'Registrando el tipo con una función especial', correct: false, explanation: 'No hay registro. La satisfacción de interfaces es verificada por el compilador.' },
+        { text: 'Heredando de la interfaz', correct: false, explanation: 'Go no tiene herencia. Usa composición e interfaces implícitas.' },
       ],
+      source: 'Effective Go',
+      sourceUrl: 'https://go.dev/doc/effective_go#interfaces',
     },
     {
-      question: 'Que es interface{} (o any en Go 1.18+)?',
+      question: '¿Cuál es la forma SEGURA de hacer un type assertion?',
       options: [
-        { text: 'Un tipo que no se puede usar', correct: false, explanation: 'interface{} es perfectamente usable, pero pierde informacion de tipos.' },
-        { text: 'Una interfaz sin metodos que cualquier tipo satisface', correct: true, explanation: 'Correcto. Como no tiene metodos requeridos, todo tipo la satisface. Es util para funciones genericas, pero pierde type safety.' },
-        { text: 'Un tipo generico como T en Java', correct: false, explanation: 'Go tiene generics desde 1.18 con [T any], pero any/interface{} no es lo mismo que un type parameter.' },
-        { text: 'Un puntero a cualquier tipo', correct: false, explanation: 'interface{} es un tipo interfaz, no un puntero. Internamente tiene un par (tipo, valor).' },
+        { text: 'val := i.(Tipo)', correct: false, explanation: 'Esta forma causa panic si el tipo no coincide. No es segura.' },
+        { text: 'val, ok := i.(Tipo)', correct: true, explanation: '¡Correcto! La forma "comma ok" retorna false en el segundo valor si la aserción falla, sin causar panic.' },
+        { text: 'val = Tipo(i)', correct: false, explanation: 'Eso es una conversión de tipo, no una type assertion. Son cosas diferentes.' },
+        { text: 'try { val := i.(Tipo) }', correct: false, explanation: 'Go no tiene try/catch. Usa la forma "comma ok" para type assertions seguras.' },
       ],
+      source: 'Go Specification',
+      sourceUrl: 'https://go.dev/ref/spec#Type_assertions',
     },
     {
-      question: 'Que hace un type switch en Go?',
+      question: '¿Qué imprime este código?\n\ntype Stringer interface { String() string }\ntype Numero int\nfunc (n Numero) String() string { return "soy un numero" }\nvar s Stringer = Numero(42)\nfmt.Println(s)',
       options: [
-        { text: 'Cambia el tipo de una variable en runtime', correct: false, explanation: 'Go es estaticamente tipado. Un type switch verifica el tipo, no lo cambia.' },
-        { text: 'Evalua el tipo concreto de un valor dentro de una interfaz y ejecuta ramas segun el tipo', correct: true, explanation: 'Correcto. switch v := i.(type) extrae el tipo concreto y permite manejar cada caso.' },
-        { text: 'Convierte entre tipos numericos automaticamente', correct: false, explanation: 'Go no hace conversiones automaticas. Un type switch es para inspeccionar interfaces.' },
-        { text: 'Es un alias de type assertion', correct: false, explanation: 'Type assertion extrae un tipo especifico. Type switch evalua multiples tipos posibles.' },
+        { text: '42', correct: false, explanation: 'Aunque el valor subyacente es 42, el tipo implementa String() que retorna otro texto.' },
+        { text: 'soy un numero', correct: true, explanation: '¡Correcto! fmt.Println llama a String() cuando el tipo implementa fmt.Stringer.' },
+        { text: 'Numero(42)', correct: false, explanation: 'fmt.Println usa String() del tipo si está disponible, no la representación por defecto.' },
+        { text: 'Error de compilación', correct: false, explanation: 'Numero implementa Stringer correctamente. El código es válido.' },
       ],
+      source: 'Go by Example: Interfaces',
+      sourceUrl: 'https://gobyexample.com/interfaces',
     },
     {
-      question: 'Cual de estas es una interfaz del standard library de Go?',
+      question: 'Rob Pike dijo: "The bigger the interface, the weaker the abstraction." ¿Qué significa?',
       options: [
-        { text: 'Serializable', correct: false, explanation: 'Serializable no existe en Go stdlib. Java la usa, pero Go usa encoding.Marshaler.' },
-        { text: 'io.Reader (metodo Read(p []byte) (n int, err error))', correct: true, explanation: 'Correcto. io.Reader es una de las interfaces mas importantes en Go. Con un solo metodo, se usa en todo el ecosistema.' },
-        { text: 'Comparable', correct: false, explanation: 'comparable existe como constraint para generics, pero no es una interfaz clasica del stdlib.' },
-        { text: 'Iterable', correct: false, explanation: 'Iterable no existe en Go. Se usa range directamente sobre slices, maps, channels y strings.' },
+        { text: 'Que las interfaces grandes son más rápidas', correct: false, explanation: 'El tamaño de una interfaz no afecta el rendimiento. Se refiere al diseño.' },
+        { text: 'Que las interfaces deben tener pocos métodos para ser más útiles y reutilizables', correct: true, explanation: '¡Correcto! Interfaces pequeñas (1-2 métodos) como io.Reader son más fáciles de implementar y componer. io.Reader solo pide Read() y la implementan cientos de tipos.' },
+        { text: 'Que no se deben usar interfaces en Go', correct: false, explanation: 'Las interfaces son fundamentales en Go. La cita promueve interfaces pequeñas, no eliminarlas.' },
+        { text: 'Que las interfaces deben ser abstractas, no concretas', correct: false, explanation: 'La cita se refiere al tamaño (cantidad de métodos), no al nivel de abstracción.' },
       ],
+      source: 'Go Proverbs',
+      sourceUrl: 'https://go-proverbs.github.io/',
     },
     {
-      question: 'Que significa "Accept interfaces, return structs" en Go?',
+      question: '¿Qué hace switch v := f.(type) { case T: ... }?',
       options: [
-        { text: 'Todas las funciones deben aceptar interfaces y retornar structs sin excepcion', correct: false, explanation: 'Es una guia, no una regla absoluta. Hay excepciones legitimas.' },
-        { text: 'Los parametros deben ser interfaces para flexibilidad, y los retornos structs concretos para dar informacion', correct: true, explanation: 'Correcto. Interfaces en parametros permiten polimorfismo. Structs en retorno dan informacion completa al caller y evitan abstracciones innecesarias.' },
-        { text: 'Nunca retornar una interfaz porque Go no lo permite', correct: false, explanation: 'Go permite retornar interfaces. La guia es preferir structs cuando no hay razon para abstraer.' },
-        { text: 'Es un patron de Java que se aplica igual en Go', correct: false, explanation: 'Este principio es especifico de Go y nace de las interfaces implicitas del lenguaje.' },
+        { text: 'Convierte f al tipo T', correct: false, explanation: 'No convierte. Verifica el tipo concreto detrás de la interfaz y ejecuta el case correspondiente.' },
+        { text: 'Es un type switch que ejecuta el case cuyo tipo coincida con el tipo concreto de f', correct: true, explanation: '¡Correcto! El type switch verifica el tipo dinámico de f. La variable v tiene el tipo correcto en cada case, sin necesidad de otra assertion.' },
+        { text: 'Crea una nueva variable del tipo T', correct: false, explanation: 'v toma el tipo del case que coincida, no crea una variable nueva de T.' },
+        { text: 'Compara los valores de f con los de tipo T', correct: false, explanation: 'Compara TIPOS, no valores. Es para saber qué tipo concreto tiene una interfaz.' },
       ],
+      source: 'Go Specification',
+      sourceUrl: 'https://go.dev/ref/spec#Type_switches',
     },
   ];
+
+  function handleQuizComplete(score: number, total: number) {
+    courseStore.completeModule(7, score, total);
+    if (score >= 3) {
+      courseStore.unlockBadge('interface-guru');
+      showBadge = true;
+    }
+  }
 </script>
 
 <svelte:head>
-  <title>Modulo 7: {mod.title} | Go Mastery</title>
+  <title>{module.title} | Curso de Go</title>
 </svelte:head>
 
-<div class="max-w-4xl mx-auto px-4 py-8">
-  <!-- Header -->
+<div class="max-w-3xl mx-auto">
   <div class="mb-8">
-    <div class="flex items-center gap-3 mb-2">
-      <span class="text-3xl">{mod.icon}</span>
-      <div>
-        <p class="text-sm text-go-accent font-mono">Modulo {MODULE_ID}</p>
-        <h1 class="text-3xl font-black">{mod.title}</h1>
-      </div>
-    </div>
-    <p class="text-go-muted mt-2">{mod.subtitle}</p>
+    <span class="text-4xl">{module.icon}</span>
+    <h1 class="text-3xl font-bold mt-2">{module.title}</h1>
+    <p class="text-go-muted mt-1">{module.subtitle}</p>
   </div>
 
-  <!-- Teoria: Interfaces -->
-  <section class="prose-section mb-8">
-    <h2 class="text-xl font-bold text-go-accent mb-4">Interfaces: Contratos implicitos</h2>
-    <p class="text-go-muted mb-4">
-      Una interfaz en Go define un conjunto de <strong class="text-go-text">firmas de metodos</strong>. Cualquier tipo
-      que implemente esos metodos satisface la interfaz <strong class="text-go-text">automaticamente</strong> — sin
-      keyword <code>implements</code>. Esto se llama <strong class="text-go-text">satisfaccion implicita</strong>.
+  <!-- Repaso Espaciado -->
+  <ReviewCards moduleId={7} cards={reviewCards} />
+
+  <!-- Intro: Duck Typing -->
+  <section class="card mb-6">
+    <h2 class="text-xl font-bold mb-3">Si camina como pato y hace cuac...</h2>
+    <p class="text-go-muted leading-relaxed mb-4">
+      En la mayoría de lenguajes, para que un tipo implemente una interfaz necesitas declarar
+      <strong class="text-go-text">implements</strong> explícitamente. En Go,
+      <strong class="text-go-accent">no</strong>.
     </p>
-    <div class="bg-go-dark rounded-lg p-4 mb-4 overflow-x-auto">
-      <pre class="text-sm font-mono text-go-text">{@html `<span class="text-go-muted">// Declarar una interfaz</span>
-<span class="text-go-accent">type</span> Shape <span class="text-go-accent">interface</span> {
-    Area() <span class="text-go-accent">float64</span>
-    Perimeter() <span class="text-go-accent">float64</span>
-}
-
-<span class="text-go-muted">// Circulo implementa Shape (sin declarar "implements")</span>
-<span class="text-go-accent">type</span> Circle <span class="text-go-accent">struct</span> { Radius <span class="text-go-accent">float64</span> }
-
-<span class="text-go-accent">func</span> (c Circle) Area() <span class="text-go-accent">float64</span>      { <span class="text-go-accent">return</span> math.Pi * c.Radius * c.Radius }
-<span class="text-go-accent">func</span> (c Circle) Perimeter() <span class="text-go-accent">float64</span> { <span class="text-go-accent">return</span> 2 * math.Pi * c.Radius }
-
-<span class="text-go-muted">// Rectangulo tambien implementa Shape</span>
-<span class="text-go-accent">type</span> Rect <span class="text-go-accent">struct</span> { W, H <span class="text-go-accent">float64</span> }
-
-<span class="text-go-accent">func</span> (r Rect) Area() <span class="text-go-accent">float64</span>      { <span class="text-go-accent">return</span> r.W * r.H }
-<span class="text-go-accent">func</span> (r Rect) Perimeter() <span class="text-go-accent">float64</span> { <span class="text-go-accent">return</span> 2 * (r.W + r.H) }
-
-<span class="text-go-muted">// Polimorfismo: ambos pueden usarse como Shape</span>
-<span class="text-go-accent">func</span> PrintInfo(s Shape) {
-    fmt.Printf("Area: %.2f, Perimetro: %.2f\\n", s.Area(), s.Perimeter())
-}`}</pre>
-    </div>
-    <div class="bg-blue-900/20 border border-blue-700/30 rounded-lg p-3 mb-4">
-      <p class="text-blue-300 text-sm font-bold">Diferencia clave con otros lenguajes:</p>
-      <p class="text-go-muted text-sm">
-        En Java/C# escribes <code>class Circulo implements Shape</code>. En Go, simplemente implementas los metodos y listo.
-        El tipo no necesita "saber" que una interfaz existe.
+    <p class="text-go-muted leading-relaxed mb-4">
+      Si tu tipo tiene los métodos correctos, <strong class="text-go-text">automáticamente</strong>
+      satisface la interfaz. No hay keyword, no hay registro, no hay ceremonia. El compilador lo
+      verifica por ti.
+    </p>
+    <div class="bg-go-accent/5 border border-go-accent/20 rounded-lg p-4 mb-4">
+      <p class="text-go-accent font-semibold text-sm mb-1">Analogía</p>
+      <p class="text-sm text-go-muted">
+        Imagina una entrevista de trabajo: en Java te piden un diploma (<code class="text-go-accent">implements</code>).
+        En Go, si sabes hacer el trabajo (tienes los métodos), te contratan sin preguntar por papeles.
       </p>
     </div>
-  </section>
-
-  <!-- Teoria: Empty interface y type assertion -->
-  <section class="prose-section mb-8">
-    <h2 class="text-xl font-bold text-go-accent mb-4">Empty Interface y Type Assertion</h2>
-    <p class="text-go-muted mb-4">
-      La <strong class="text-go-text">interfaz vacia</strong> ({@html `<code>interface{}</code>`} o <code>any</code> desde Go 1.18)
-      no tiene metodos, por lo que <strong class="text-go-text">cualquier tipo la satisface</strong>. Es util para
-      funciones genericas, pero pierdes type safety.
-    </p>
-    <div class="bg-go-dark rounded-lg p-4 mb-4 overflow-x-auto">
-      <pre class="text-sm font-mono text-go-text">{@html `<span class="text-go-muted">// interface{} acepta cualquier valor</span>
-<span class="text-go-accent">func</span> PrintAny(v <span class="text-go-accent">interface</span>{}) {
-    fmt.Println(v)
+    {@html `<pre class="bg-go-darker rounded-lg p-4 font-mono text-sm overflow-x-auto"><code><span class="text-go-muted">// Declarar una interfaz</span>
+<span class="text-go-accent">type</span> <span class="text-go-warning">Hablante</span> <span class="text-go-accent">interface</span> {
+    Hablar() <span class="text-go-accent">string</span>
 }
 
-<span class="text-go-muted">// Type assertion: extraer el tipo concreto</span>
-<span class="text-go-accent">var</span> i <span class="text-go-accent">interface</span>{} = "hola"
+<span class="text-go-muted">// Perro implementa Hablante... sin decir "implements"</span>
+<span class="text-go-accent">type</span> <span class="text-go-warning">Perro</span> <span class="text-go-accent">struct</span>{ Nombre <span class="text-go-accent">string</span> }
 
-s := i.(<span class="text-go-accent">string</span>)              <span class="text-go-muted">// panic si no es string!</span>
-s, ok := i.(<span class="text-go-accent">string</span>)          <span class="text-go-muted">// ok=true, s="hola" (seguro)</span>
-n, ok := i.(<span class="text-go-accent">int</span>)             <span class="text-go-muted">// ok=false, n=0 (seguro)</span>`}</pre>
-    </div>
-
-    <h3 class="text-lg font-bold text-go-text mb-3">Type Switch</h3>
-    <div class="bg-go-dark rounded-lg p-4 mb-4 overflow-x-auto">
-      <pre class="text-sm font-mono text-go-text">{@html `<span class="text-go-accent">func</span> Describe(i <span class="text-go-accent">interface</span>{}) <span class="text-go-accent">string</span> {
-    <span class="text-go-accent">switch</span> v := i.(<span class="text-go-accent">type</span>) {
-    <span class="text-go-accent">case</span> <span class="text-go-accent">string</span>:
-        <span class="text-go-accent">return</span> "string: " + v
-    <span class="text-go-accent">case</span> <span class="text-go-accent">int</span>:
-        <span class="text-go-accent">return</span> fmt.Sprintf("int: %d", v)
-    <span class="text-go-accent">case</span> <span class="text-go-accent">bool</span>:
-        <span class="text-go-accent">return</span> fmt.Sprintf("bool: %t", v)
-    <span class="text-go-accent">default</span>:
-        <span class="text-go-accent">return</span> fmt.Sprintf("otro: %v", v)
-    }
-}`}</pre>
-    </div>
+<span class="text-go-accent">func</span> (p Perro) <span class="text-go-warning">Hablar</span>() <span class="text-go-accent">string</span> {
+    <span class="text-go-accent">return</span> <span class="text-go-success">"Guau! Soy "</span> + p.Nombre
+}</code></pre>`}
   </section>
 
-  <!-- Teoria: Interfaces del stdlib -->
-  <section class="prose-section mb-8">
-    <h2 class="text-xl font-bold text-go-accent mb-4">Interfaces clave del Standard Library</h2>
-    <p class="text-go-muted mb-4">
-      Go sigue el principio de <strong class="text-go-text">interfaces pequenas</strong>. Las mas importantes del stdlib
-      tienen 1-3 metodos:
+  <!-- Type Assertions y Type Switches -->
+  <section class="card mb-6">
+    <h2 class="text-xl font-bold mb-3">Type Assertions: Recuperar el Tipo Concreto</h2>
+    <p class="text-go-muted leading-relaxed mb-4">
+      Cuando tienes una variable de tipo interfaz, a veces necesitas saber <strong class="text-go-text">qué tipo concreto</strong>
+      hay detrás. Go ofrece dos herramientas para esto:
     </p>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-      <div class="bg-go-card border border-go-border rounded-lg p-3">
-        <p class="text-go-accent font-mono text-sm font-bold">io.Reader</p>
-        <p class="text-go-muted text-xs mt-1">Read(p []byte) (n int, err error)</p>
-        <p class="text-go-muted text-xs">Archivos, HTTP bodies, buffers...</p>
+      <div class="bg-go-darker rounded-lg p-3">
+        <p class="text-go-accent font-semibold text-sm">Type Assertion</p>
+        <p class="text-go-muted text-sm mb-2">Extrae un tipo específico</p>
+        {@html `<pre class="font-mono text-xs"><code><span class="text-go-muted">// Forma segura (comma ok)</span>
+val, ok := i.(<span class="text-go-warning">string</span>)
+<span class="text-go-accent">if</span> ok {
+    fmt.Println(val)
+}</code></pre>`}
       </div>
-      <div class="bg-go-card border border-go-border rounded-lg p-3">
-        <p class="text-go-accent font-mono text-sm font-bold">io.Writer</p>
-        <p class="text-go-muted text-xs mt-1">Write(p []byte) (n int, err error)</p>
-        <p class="text-go-muted text-xs">Archivos, HTTP responses, stdout...</p>
-      </div>
-      <div class="bg-go-card border border-go-border rounded-lg p-3">
-        <p class="text-go-accent font-mono text-sm font-bold">fmt.Stringer</p>
-        <p class="text-go-muted text-xs mt-1">String() string</p>
-        <p class="text-go-muted text-xs">Como toString() — define representacion textual</p>
-      </div>
-      <div class="bg-go-card border border-go-border rounded-lg p-3">
-        <p class="text-go-accent font-mono text-sm font-bold">error</p>
-        <p class="text-go-muted text-xs mt-1">Error() string</p>
-        <p class="text-go-muted text-xs">La interfaz para manejo de errores en Go</p>
+      <div class="bg-go-darker rounded-lg p-3">
+        <p class="text-go-accent font-semibold text-sm">Type Switch</p>
+        <p class="text-go-muted text-sm mb-2">Maneja múltiples tipos</p>
+        {@html `<pre class="font-mono text-xs"><code><span class="text-go-accent">switch</span> v := i.(<span class="text-go-accent">type</span>) {
+<span class="text-go-accent">case</span> <span class="text-go-warning">string</span>:
+    fmt.Println(<span class="text-go-success">"String:"</span>, v)
+<span class="text-go-accent">case</span> <span class="text-go-warning">int</span>:
+    fmt.Println(<span class="text-go-success">"Int:"</span>, v)
+}</code></pre>`}
       </div>
     </div>
-
-    <h3 class="text-lg font-bold text-go-text mb-3">Composicion de interfaces</h3>
-    <div class="bg-go-dark rounded-lg p-4 mb-4 overflow-x-auto">
-      <pre class="text-sm font-mono text-go-text">{@html `<span class="text-go-muted">// Componer interfaces pequenas en mas grandes</span>
-<span class="text-go-accent">type</span> ReadWriter <span class="text-go-accent">interface</span> {
-    io.Reader
-    io.Writer
-}
-
-<span class="text-go-muted">// Equivalente a:</span>
-<span class="text-go-accent">type</span> ReadWriter <span class="text-go-accent">interface</span> {
-    Read(p []<span class="text-go-accent">byte</span>) (<span class="text-go-accent">int</span>, <span class="text-go-accent">error</span>)
-    Write(p []<span class="text-go-accent">byte</span>) (<span class="text-go-accent">int</span>, <span class="text-go-accent">error</span>)
-}`}</pre>
-    </div>
-
-    <div class="bg-green-900/20 border border-green-700/30 rounded-lg p-3 mb-4">
-      <p class="text-green-300 text-sm font-bold">Principio idiomatico:</p>
-      <p class="text-go-muted text-sm">
-        <strong>"Accept interfaces, return structs"</strong> — tus funciones deben recibir interfaces como parametros
-        (para flexibilidad) y retornar tipos concretos (para dar informacion completa al caller).
+    <div class="bg-go-danger/10 border border-go-danger/30 rounded-lg p-3">
+      <p class="text-go-danger font-semibold text-sm mb-1">Cuidado</p>
+      <p class="text-sm text-go-muted">
+        <code class="text-go-danger">val := i.(string)</code> sin el segundo valor causa <strong>panic</strong>
+        si <code>i</code> no es un string. Siempre usa la forma <code class="text-go-accent">val, ok := i.(string)</code>.
       </p>
     </div>
   </section>
 
-  <!-- Branching Scenario -->
-  <section class="mb-8">
-    <h2 class="text-xl font-bold text-go-accent mb-4">Escenario: Disenando con Interfaces</h2>
-    <p class="text-go-muted mb-4">
-      Toma decisiones de diseno en un escenario real. Cada eleccion afecta la calidad de tu arquitectura.
+  <!-- Interfaces de la stdlib -->
+  <section class="card mb-6">
+    <h2 class="text-xl font-bold mb-3">Interfaces Clave de la Stdlib</h2>
+    <p class="text-go-muted leading-relaxed mb-4">
+      Go favorece interfaces <strong class="text-go-text">pequeñas</strong>. Las más importantes de la stdlib
+      tienen 1 o 2 métodos:
     </p>
-    <BranchingScenario
-      nodes={scenarioNodes}
-      startId="start"
-      title="Sistema de Notificaciones"
-      onComplete={handleScenarioComplete}
+    <div class="bg-go-darker rounded-lg overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-go-border text-go-accent">
+            <th class="text-left p-3 font-semibold">Interfaz</th>
+            <th class="text-left p-3 font-semibold">Método</th>
+            <th class="text-left p-3 font-semibold">Uso</th>
+          </tr>
+        </thead>
+        <tbody class="text-go-muted">
+          <tr class="border-b border-go-border/50">
+            <td class="p-3"><code class="text-go-accent">io.Reader</code></td>
+            <td class="p-3"><code>Read(p []byte) (n int, err error)</code></td>
+            <td class="p-3">Leer datos de cualquier fuente</td>
+          </tr>
+          <tr class="border-b border-go-border/50">
+            <td class="p-3"><code class="text-go-accent">io.Writer</code></td>
+            <td class="p-3"><code>Write(p []byte) (n int, err error)</code></td>
+            <td class="p-3">Escribir datos a cualquier destino</td>
+          </tr>
+          <tr class="border-b border-go-border/50">
+            <td class="p-3"><code class="text-go-accent">fmt.Stringer</code></td>
+            <td class="p-3"><code>String() string</code></td>
+            <td class="p-3">Controlar cómo se imprime un tipo</td>
+          </tr>
+          <tr class="border-b border-go-border/50">
+            <td class="p-3"><code class="text-go-accent">error</code></td>
+            <td class="p-3"><code>Error() string</code></td>
+            <td class="p-3">Representar errores como valores</td>
+          </tr>
+          <tr>
+            <td class="p-3"><code class="text-go-accent">sort.Interface</code></td>
+            <td class="p-3"><code>Len, Less, Swap</code></td>
+            <td class="p-3">Ordenar colecciones</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Composición de interfaces -->
+  <section class="card mb-6">
+    <h2 class="text-xl font-bold mb-3">Composición: Interfaces Pequeñas y Poderosas</h2>
+    <p class="text-go-muted leading-relaxed mb-4">
+      La filosofía de Go es clara: interfaces pequeñas que se <strong class="text-go-text">componen</strong>.
+    </p>
+    <div class="bg-go-accent/5 border border-go-accent/20 rounded-lg p-4 mb-4">
+      <p class="text-go-accent font-semibold text-sm italic">
+        "The bigger the interface, the weaker the abstraction."
+      </p>
+      <p class="text-xs text-go-muted mt-1">— Rob Pike, Go Proverbs</p>
+    </div>
+    {@html `<pre class="bg-go-darker rounded-lg p-4 font-mono text-sm overflow-x-auto"><code><span class="text-go-muted">// Interfaces pequeñas (1 método cada una)</span>
+<span class="text-go-accent">type</span> <span class="text-go-warning">Reader</span> <span class="text-go-accent">interface</span> { Read(p []<span class="text-go-accent">byte</span>) (<span class="text-go-accent">int</span>, <span class="text-go-accent">error</span>) }
+<span class="text-go-accent">type</span> <span class="text-go-warning">Writer</span> <span class="text-go-accent">interface</span> { Write(p []<span class="text-go-accent">byte</span>) (<span class="text-go-accent">int</span>, <span class="text-go-accent">error</span>) }
+
+<span class="text-go-muted">// Se componen en interfaces más grandes</span>
+<span class="text-go-accent">type</span> <span class="text-go-warning">ReadWriter</span> <span class="text-go-accent">interface</span> {
+    Reader
+    Writer
+}
+
+<span class="text-go-muted">// Un tipo que implemente Read() y Write()</span>
+<span class="text-go-muted">// automáticamente satisface Reader, Writer Y ReadWriter</span></code></pre>`}
+    <p class="text-go-muted text-sm mt-3">
+      Este patrón permite que un tipo satisfaga <strong class="text-go-text">múltiples interfaces</strong>
+      sin esfuerzo adicional. En el stdlib, <code class="text-go-accent">os.File</code> implementa
+      Reader, Writer, Closer y muchas más.
+    </p>
+  </section>
+
+  <!-- GoPlayground: interface vacía -->
+  <section class="mb-6">
+    <h2 class="text-xl font-bold mb-3">Experimenta: interface y Type Switch</h2>
+    <p class="text-go-muted mb-4">
+      La interfaz vacía <code class="text-go-accent">interface{'{}'}</code> (o <code class="text-go-accent">any</code> desde Go 1.18)
+      acepta cualquier tipo. Combinada con type switch, es poderosa:
+    </p>
+    <GoPlayground
+      code={interfacePlaygroundCode}
+      title="interface y Type Switch"
+      description="Prueba agregar más tipos al switch: float64, []int, struct..."
     />
   </section>
 
-  <!-- Quiz -->
-  <section class="mb-8">
-    <h2 class="text-xl font-bold text-go-accent mb-4">Quiz: Interfaces y Polimorfismo</h2>
+  <!-- Worked Examples -->
+  <section class="mb-6">
+    <h2 class="text-xl font-bold mb-4">Ejemplos Guiados</h2>
+    {#each workedExamples as we}
+      <div class="mb-6">
+        <WorkedExample
+          title={we.title}
+          description={we.description}
+          steps={we.steps}
+          playground={we.playground}
+          playgroundCode={we.playgroundCode}
+        />
+      </div>
+    {/each}
+  </section>
+
+  <!-- Code Challenges -->
+  <section class="mb-6">
+    <h2 class="text-xl font-bold mb-4">Desafios de Codigo</h2>
     <p class="text-go-muted mb-4">
-      Verifica tu comprension sobre interfaces, type assertions y patrones idiomaticos.
+      Pon en practica lo aprendido. Cada ejercicio va subiendo de dificultad:
     </p>
+    {#each exercises as exercise}
+      <div class="mb-6">
+        <CodeChallenge
+          {exercise}
+          onComplete={(id, score, hints) => courseStore.completeExercise(id, score, hints)}
+        />
+      </div>
+    {/each}
+  </section>
+
+  <!-- Quiz -->
+  <section class="mb-6">
+    <h2 class="text-xl font-bold mb-4">Pon a Prueba tu Conocimiento</h2>
     <Quiz questions={quizQuestions} onComplete={handleQuizComplete} />
   </section>
 
-  {#if scenarioCompleted && quizCompleted}
-    <div class="bg-go-card border border-go-accent/30 rounded-lg p-4 mb-8 text-center">
-      <p class="text-go-accent font-bold text-lg">Modulo completado</p>
-      <p class="text-go-muted">Escenario: {scenarioScore}/12 | Quiz: {quizScore}/{quizTotal}</p>
-    </div>
-  {/if}
-
-  <!-- Sources -->
-  <SourcesSection sources={mod.sources} />
-
-  <!-- Navigation -->
-  <ModuleNav currentModule={MODULE_ID} />
+  <SourcesSection sources={module.sources} />
+  <ModuleNav currentModule={7} />
 </div>
 
-<!-- Vocabulary -->
-<VocabularyFloat moduleId={MODULE_ID} />
+<VocabularyFloat moduleId={7} />
 
-<!-- Badge Notification -->
-{#if showBadge && earnedBadge}
+{#if showBadge}
   <BadgeNotification badge={earnedBadge} onClose={() => showBadge = false} />
 {/if}

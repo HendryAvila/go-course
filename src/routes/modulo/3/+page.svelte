@@ -7,20 +7,27 @@
   import BadgeNotification from '$lib/components/BadgeNotification.svelte';
   import Quiz from '$lib/components/Quiz.svelte';
   import GoPlayground from '$lib/components/GoPlayground.svelte';
+  import WorkedExample from '$lib/components/WorkedExample.svelte';
+  import CodeChallenge from '$lib/components/CodeChallenge.svelte';
+  import ReviewCards from '$lib/components/ReviewCards.svelte';
+  import { exercises, workedExamples } from '$lib/data/exercises/module-3';
+  import { reviewCards } from '$lib/data/exercises/review-cards';
 
   const module = modules.find(m => m.id === 3)!;
   let showBadge = $state(false);
   let earnedBadge = $state(allBadges.find(b => b.id === 'flow-master')!);
+
+  courseStore.startModule(3);
 
   const playgroundCode = `package main
 
 import "fmt"
 
 func main() {
-\t// === FOR: el unico loop en Go ===
+\t// === FOR: el único loop en Go ===
 
-\t// 1. For clasico (estilo C)
-\tfmt.Println("=== For clasico ===")
+\t// 1. For clásico (estilo C)
+\tfmt.Println("=== For clásico ===")
 \tfor i := 0; i < 5; i++ {
 \t\tfmt.Printf("i = %d\\n", i)
 \t}
@@ -33,96 +40,90 @@ func main() {
 \t}
 \tfmt.Printf("n = %d\\n", n)
 
-\t// 3. For range (sobre slices, maps, strings)
-\tfmt.Println("\\n=== For range ===")
+\t// 3. Range over integers (Go 1.22+)
+\tfmt.Println("\\n=== Range over integers (Go 1.22+) ===")
+\tfor i := range 5 {
+\t\tfmt.Printf("i = %d\\n", i)
+\t}
+
+\t// 4. For range sobre slice
+\tfmt.Println("\\n=== For range sobre slice ===")
 \tlenguajes := []string{"Go", "Rust", "Python"}
 \tfor i, lang := range lenguajes {
 \t\tfmt.Printf("[%d] %s\\n", i, lang)
 \t}
 
-\t// 4. For infinito con break
-\tfmt.Println("\\n=== For infinito ===")
-\tcontador := 0
-\tfor {
-\t\tcontador++
-\t\tif contador >= 3 {
-\t\t\tbreak
-\t\t}
-\t\tfmt.Printf("contador = %d\\n", contador)
-\t}
-
-\t// === DEFER: LIFO (ultimo en entrar, primero en salir) ===
+\t// === DEFER: LIFO ===
 \tfmt.Println("\\n=== Defer (observa el orden!) ===")
 \tfmt.Println("inicio")
 \tdefer fmt.Println("defer 1")
 \tdefer fmt.Println("defer 2")
 \tdefer fmt.Println("defer 3")
 \tfmt.Println("fin")
-\t// Output: inicio, fin, defer 3, defer 2, defer 1
 
 \t// === IF con init statement ===
 \tfmt.Println("\\n=== If con init statement ===")
 \tif x := 42; x > 40 {
 \t\tfmt.Printf("x=%d es mayor que 40\\n", x)
 \t}
-\t// x no existe fuera del if
 }`;
 
   const quizQuestions = [
     {
-      question: '¿Cuantas estructuras de loop tiene Go?',
+      question: '¿Cuántas estructuras de loop tiene Go?',
       options: [
         { text: 'Tres: for, while, do-while', correct: false, explanation: 'Go solo tiene for. No existe while ni do-while como keywords separadas.' },
         { text: 'Dos: for y foreach', correct: false, explanation: 'Go solo tiene for. for range reemplaza a foreach, pero sigue siendo for.' },
-        { text: 'Una: for (que puede funcionar como while, foreach, etc.)', correct: true, explanation: '¡Correcto! for es el UNICO loop de Go. Se adapta a todas las necesidades con diferentes sintaxis.' },
-        { text: 'Cuatro: for, while, loop, range', correct: false, explanation: 'Go tiene un solo loop: for. range es un keyword que se usa CON for.' },
+        { text: 'Una: for (que puede funcionar como while, foreach, etc.)', correct: true, explanation: '¡Correcto! for es el ÚNICO loop de Go. Se adapta a todas las necesidades con diferentes sintaxis.' },
+        { text: 'Cuatro: for, while, loop, range', correct: false, explanation: 'Go tiene un solo loop: for. range es una keyword que se usa CON for.' },
       ],
       source: 'Effective Go',
       sourceUrl: 'https://go.dev/doc/effective_go#for',
     },
     {
-      question: '¿En que orden se ejecutan los defer?',
+      question: '¿Qué imprime este código?\nfor i := range 5 {\n  fmt.Print(i, " ")\n}',
+      type: 'code' as const,
       options: [
-        { text: 'En el orden en que se declararon (FIFO)', correct: false, explanation: 'No es FIFO. Los defers se apilan y se ejecutan en orden inverso.' },
-        { text: 'En orden inverso - LIFO (ultimo en entrar, primero en salir)', correct: true, explanation: '¡Correcto! defer usa una pila (stack). El ultimo defer declarado se ejecuta primero.' },
-        { text: 'En orden aleatorio', correct: false, explanation: 'El orden de defer es determinista: LIFO, como una pila.' },
-        { text: 'Todos al mismo tiempo (concurrentemente)', correct: false, explanation: 'Los defers se ejecutan secuencialmente, uno a uno, en orden LIFO.' },
+        { text: '1 2 3 4 5', correct: false, explanation: 'range N genera de 0 a N-1, no de 1 a N.' },
+        { text: '0 1 2 3 4', correct: true, explanation: '¡Correcto! range 5 genera los valores 0, 1, 2, 3, 4. Es como range(5) en Python. Esta sintaxis es nueva en Go 1.22.' },
+        { text: 'Error: range solo funciona con slices', correct: false, explanation: 'Desde Go 1.22, range también funciona con enteros. Es una adición al lenguaje.' },
+        { text: '0 1 2 3 4 5', correct: false, explanation: 'range 5 genera 5 valores: 0 a 4. El 5 no está incluido.' },
+      ],
+      source: 'Go 1.22 Release Notes',
+      sourceUrl: 'https://go.dev/blog/go1.22',
+    },
+    {
+      question: '¿En qué orden se ejecutan los defer?\ndefer fmt.Println("A")\ndefer fmt.Println("B")\ndefer fmt.Println("C")',
+      type: 'code' as const,
+      options: [
+        { text: 'A B C (en orden)', correct: false, explanation: 'Los defers NO se ejecutan en orden — usan una pila (LIFO).' },
+        { text: 'C B A (orden inverso)', correct: true, explanation: '¡Correcto! Los defer se apilan: el último en registrarse es el primero en ejecutarse (LIFO — Last In, First Out).' },
+        { text: 'Solo C (los anteriores se pierden)', correct: false, explanation: 'TODOS los defers se ejecutan, no solo el último.' },
+        { text: 'Aleatorio', correct: false, explanation: 'El orden de defer es determinista: siempre LIFO.' },
       ],
       source: 'Go Specification: Defer',
       sourceUrl: 'https://go.dev/ref/spec#Defer_statements',
     },
     {
-      question: '¿Que tiene de especial el switch de Go comparado con C/Java?',
+      question: '¿Qué tiene de especial el switch de Go comparado con C/Java?',
       options: [
-        { text: 'Es mas lento que en otros lenguajes', correct: false, explanation: 'El rendimiento del switch en Go es excelente. La diferencia es de comportamiento.' },
-        { text: 'Los cases NO caen al siguiente (no necesita break)', correct: true, explanation: '¡Correcto! En Go, cada case tiene un break implicito. Si QUIERES fall-through, usas la keyword fallthrough.' },
-        { text: 'Solo acepta tipos numericos', correct: false, explanation: 'switch en Go acepta cualquier tipo comparable, incluyendo strings.' },
-        { text: 'No existe switch en Go', correct: false, explanation: 'Go tiene switch y es muy poderoso, incluyendo switch sin expresion.' },
+        { text: 'Es más lento', correct: false, explanation: 'El rendimiento del switch en Go es excelente. La diferencia es de comportamiento.' },
+        { text: 'Los cases NO caen al siguiente (break implícito)', correct: true, explanation: '¡Correcto! En Go, cada case tiene un break implícito. Si quieres fall-through, usas la keyword fallthrough explícitamente.' },
+        { text: 'Solo acepta números', correct: false, explanation: 'switch en Go acepta cualquier tipo comparable, incluyendo strings.' },
+        { text: 'No existe switch en Go', correct: false, explanation: 'Go tiene switch y es muy poderoso, incluyendo switch sin expresión.' },
       ],
       source: 'Effective Go: Switch',
       sourceUrl: 'https://go.dev/doc/effective_go#switch',
     },
     {
-      question: '¿Que hace "if x := compute(); x > 0" en Go?',
+      question: '¿Qué imprime este código?\nvalor := "inicio"\ndefer fmt.Println(valor)\nvalor = "final"\nfmt.Println(valor)',
+      type: 'code' as const,
       options: [
-        { text: 'Es un error de sintaxis', correct: false, explanation: 'Es perfectamente valido. Go permite una sentencia de inicializacion antes de la condicion del if.' },
-        { text: 'Declara x, la inicializa con compute(), y evalua si x > 0', correct: true, explanation: '¡Correcto! El init statement del if declara x con alcance limitado al bloque if/else.' },
-        { text: 'Ejecuta compute() y x > 0 en paralelo', correct: false, explanation: 'Se ejecutan secuencialmente: primero compute(), luego la comparacion.' },
-        { text: 'Asigna compute() a una variable global x', correct: false, explanation: 'x tiene alcance (scope) solo dentro del bloque if/else, no es global.' },
+        { text: 'final luego final', correct: false, explanation: 'defer captura el valor de los argumentos al momento de registrar el defer, no al ejecutarlo.' },
+        { text: 'final luego inicio', correct: true, explanation: '¡Correcto! Primero imprime "final" (la línea normal). Luego el defer imprime "inicio" porque los argumentos de defer se evalúan cuando se registra, no cuando se ejecuta.' },
+        { text: 'inicio luego final', correct: false, explanation: 'El defer se ejecuta al final de la función, no en el orden del código.' },
+        { text: 'Error de compilación', correct: false, explanation: 'El código es perfectamente válido.' },
       ],
-      source: 'Go Specification',
-      sourceUrl: 'https://go.dev/ref/spec#If_statements',
-    },
-    {
-      question: '¿Cuando se ejecutan las funciones diferidas con defer?',
-      options: [
-        { text: 'Inmediatamente despues de la linea del defer', correct: false, explanation: 'Si se ejecutara inmediatamente, no tendria sentido usar defer.' },
-        { text: 'Al final del bloque if/for donde se declaro', correct: false, explanation: 'defer NO se ejecuta al final de un bloque. Se ejecuta al final de la FUNCION.' },
-        { text: 'Cuando la funcion que lo contiene retorna', correct: true, explanation: '¡Correcto! defer ejecuta la funcion diferida cuando la funcion contenedora termina (return, panic, o fin normal).' },
-        { text: 'Cuando el programa termina', correct: false, explanation: 'Se ejecuta al retornar la funcion, no al terminar el programa. Si main() tiene defer, coincide, pero es por el retorno de main.' },
-      ],
-      source: 'Effective Go: Defer',
-      sourceUrl: 'https://go.dev/doc/effective_go#defer',
     },
   ];
 
@@ -146,50 +147,54 @@ func main() {
     <p class="text-go-muted mt-1">{module.subtitle}</p>
   </div>
 
+  <!-- Review Cards (spaced repetition from modules 1-2) -->
+  <ReviewCards moduleId={3} cards={reviewCards} />
+
   <!-- If -->
   <section class="card mb-6">
     <h2 class="text-xl font-bold mb-3">if: Con Init Statement</h2>
     <p class="text-go-muted leading-relaxed mb-4">
-      El <code class="text-go-accent">if</code> de Go es como el de otros lenguajes, pero con un superpoder:
-      puedes declarar una variable <strong class="text-go-text">dentro del propio if</strong> que solo vive
-      en ese scope. No necesitas parentesis alrededor de la condicion.
+      El <code class="text-go-accent">if</code> de Go no usa paréntesis alrededor de la condición, pero
+      las llaves son obligatorias. Su superpoder es el <strong class="text-go-text">init statement</strong>:
+      puedes declarar una variable que solo vive dentro del bloque if/else.
     </p>
-    {@html `<pre class="bg-go-darker rounded-lg p-4 font-mono text-sm overflow-x-auto"><code><span class="text-go-muted">// if basico - sin parentesis!</span>
-<span class="text-go-accent">if</span> x &gt; 10 {
+    {@html `<pre class="bg-go-darker rounded-lg p-4 font-mono text-sm overflow-x-auto mb-4"><code><span class="text-go-muted">// if básico — sin paréntesis!</span>
+<span class="text-go-accent">if</span> x > 10 {
     fmt.Println(<span class="text-go-success">"mayor"</span>)
 }
 
-<span class="text-go-muted">// if con init statement - x solo existe dentro del if/else</span>
-<span class="text-go-accent">if</span> x := calcular(); x &gt; 0 {
+<span class="text-go-muted">// if con init statement — x solo existe dentro del if/else</span>
+<span class="text-go-accent">if</span> x := calcular(); x > 0 {
     fmt.Println(<span class="text-go-success">"positivo"</span>, x)
 } <span class="text-go-accent">else</span> {
     fmt.Println(<span class="text-go-success">"no positivo"</span>, x)
 }
-<span class="text-go-muted">// x ya no existe aqui</span></code></pre>`}
-    <div class="bg-go-darker rounded-lg p-4 border-l-4 border-go-accent mt-4">
-      <p class="text-go-accent font-semibold text-sm mb-1">Patron comun</p>
+<span class="text-go-muted">// x ya NO existe aquí — scope limitado</span></code></pre>`}
+    <div class="bg-go-accent/5 border border-go-accent/20 rounded-lg p-3 mt-3">
+      <p class="text-go-accent font-semibold text-sm mb-1">Patrón idiomático</p>
       <p class="text-go-muted text-sm">
-        El init statement es muy usado con el patron de errores:
-        <code class="text-go-accent">if err := doSomething(); err != nil</code>
+        El init statement es la forma estándar de manejar errores en Go:
+        <code class="text-go-accent">if err := doSomething(); err != nil</code>.
+        El error solo vive dentro del if — no contamina el scope exterior.
       </p>
     </div>
   </section>
 
   <!-- For -->
   <section class="card mb-6">
-    <h2 class="text-xl font-bold mb-3">for: El Unico Loop</h2>
+    <h2 class="text-xl font-bold mb-3">for: El Único Loop</h2>
     <p class="text-go-muted leading-relaxed mb-4">
-      Go tiene <strong class="text-go-text">un solo loop: for</strong>. No existe while, do-while ni foreach.
-      Pero <code class="text-go-accent">for</code> se adapta a todas las necesidades:
+      Go tiene <strong class="text-go-text">un solo loop: for</strong>. No existe while, do-while ni foreach
+      como keywords separadas. Pero <code class="text-go-accent">for</code> se adapta a todas las necesidades:
     </p>
-    {@html `<pre class="bg-go-darker rounded-lg p-4 font-mono text-sm overflow-x-auto"><code><span class="text-go-muted">// 1. For clasico (estilo C)</span>
+    {@html `<pre class="bg-go-darker rounded-lg p-4 font-mono text-sm overflow-x-auto mb-4"><code><span class="text-go-muted">// 1. For clásico (estilo C)</span>
 <span class="text-go-accent">for</span> i := 0; i &lt; 10; i++ {
     fmt.Println(i)
 }
 
-<span class="text-go-muted">// 2. For como "while"</span>
+<span class="text-go-muted">// 2. For como "while" (solo condición)</span>
 <span class="text-go-accent">for</span> condicion {
-    <span class="text-go-muted">// se repite mientras condicion sea true</span>
+    <span class="text-go-muted">// se repite mientras condición sea true</span>
 }
 
 <span class="text-go-muted">// 3. For range (itera sobre colecciones)</span>
@@ -199,81 +204,150 @@ func main() {
 
 <span class="text-go-muted">// 4. For infinito</span>
 <span class="text-go-accent">for</span> {
-    <span class="text-go-muted">// loop infinito - usa break para salir</span>
-    <span class="text-go-accent">if</span> listo {
-        <span class="text-go-accent">break</span>
-    }
+    <span class="text-go-muted">// loop infinito — usa break para salir</span>
 }</code></pre>`}
+    <p class="text-go-muted text-sm mt-3">
+      Si no necesitas el índice en un range, usa <code class="text-go-accent">_</code>:
+      <code class="text-go-accent">for _, valor := range coleccion</code>.
+      Si no necesitas el valor: <code class="text-go-accent">for i := range coleccion</code>.
+    </p>
+  </section>
+
+  <!-- Range over integers -->
+  <section class="card mb-6">
+    <div class="flex items-center gap-2 mb-3">
+      <h2 class="text-xl font-bold">range sobre Enteros</h2>
+      <span class="badge bg-go-success/20 text-go-success text-xs">Go 1.22+</span>
+    </div>
+    <p class="text-go-muted leading-relaxed mb-4">
+      Desde <strong class="text-go-text">Go 1.22</strong>, puedes usar <code class="text-go-accent">range</code>
+      directamente con un número entero. Esto simplifica los contadores clásicos:
+    </p>
+    {@html `<pre class="bg-go-darker rounded-lg p-4 font-mono text-sm overflow-x-auto mb-4"><code><span class="text-go-muted">// Antes (Go &lt; 1.22)</span>
+<span class="text-go-accent">for</span> i := 0; i &lt; 5; i++ {
+    fmt.Println(i)
+}
+
+<span class="text-go-muted">// Ahora (Go 1.22+) — más limpio</span>
+<span class="text-go-accent">for</span> i := <span class="text-go-accent">range</span> 5 {
+    fmt.Println(i)  <span class="text-go-muted">// 0, 1, 2, 3, 4</span>
+}</code></pre>`}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+      <div class="bg-go-darker rounded-lg p-3">
+        <p class="text-go-accent font-semibold text-sm mb-1">Cuándo usarlo</p>
+        <p class="text-go-muted text-sm">
+          Cuando necesitas iterar N veces y solo te importa el índice. Es más claro y tiene menos posibilidad de
+          errores off-by-one.
+        </p>
+      </div>
+      <div class="bg-go-darker rounded-lg p-3">
+        <p class="text-go-accent font-semibold text-sm mb-1">Equivalencia</p>
+        <p class="text-go-muted text-sm">
+          <code class="text-go-accent">range 5</code> genera: 0, 1, 2, 3, 4.
+          Es como <code class="text-go-accent">range(5)</code> en Python — el límite superior no se incluye.
+        </p>
+      </div>
+    </div>
   </section>
 
   <!-- Switch -->
   <section class="card mb-6">
     <h2 class="text-xl font-bold mb-3">switch: Sin Break Necesario</h2>
     <p class="text-go-muted leading-relaxed mb-4">
-      El <code class="text-go-accent">switch</code> de Go es mas limpio que en C/Java: los cases
-      <strong class="text-go-text">NO caen al siguiente</strong> automaticamente. Si quieres que caigan,
-      usas <code class="text-go-accent">fallthrough</code> explicitamente.
+      El <code class="text-go-accent">switch</code> de Go es más limpio que en C/Java: cada case tiene
+      <strong class="text-go-text">break implícito</strong>. No hay "fall-through" accidental.
+      Si realmente quieres que caiga al siguiente case, usas <code class="text-go-accent">fallthrough</code> explícitamente.
     </p>
-    {@html `<pre class="bg-go-darker rounded-lg p-4 font-mono text-sm overflow-x-auto"><code><span class="text-go-muted">// switch basico - no necesita break!</span>
+    {@html `<pre class="bg-go-darker rounded-lg p-4 font-mono text-sm overflow-x-auto mb-4"><code><span class="text-go-muted">// switch básico — no necesita break!</span>
 <span class="text-go-accent">switch</span> dia {
 <span class="text-go-accent">case</span> <span class="text-go-success">"lunes"</span>:
     fmt.Println(<span class="text-go-success">"inicio de semana"</span>)
-<span class="text-go-accent">case</span> <span class="text-go-success">"viernes"</span>:
-    fmt.Println(<span class="text-go-success">"casi fin de semana!"</span>)
+<span class="text-go-accent">case</span> <span class="text-go-success">"viernes"</span>, <span class="text-go-success">"sábado"</span>:   <span class="text-go-muted">// múltiples valores en un case</span>
+    fmt.Println(<span class="text-go-success">"fin de semana!"</span>)
 <span class="text-go-accent">default</span>:
-    fmt.Println(<span class="text-go-success">"dia normal"</span>)
+    fmt.Println(<span class="text-go-success">"día normal"</span>)
 }
 
-<span class="text-go-muted">// switch sin expresion (reemplaza if/else if)</span>
+<span class="text-go-muted">// switch sin expresión — reemplaza cadenas de if/else</span>
 <span class="text-go-accent">switch</span> {
 <span class="text-go-accent">case</span> hora &lt; 12:
-    fmt.Println(<span class="text-go-success">"buenos dias"</span>)
+    fmt.Println(<span class="text-go-success">"buenos días"</span>)
 <span class="text-go-accent">case</span> hora &lt; 18:
     fmt.Println(<span class="text-go-success">"buenas tardes"</span>)
 <span class="text-go-accent">default</span>:
     fmt.Println(<span class="text-go-success">"buenas noches"</span>)
-}
-
-<span class="text-go-muted">// switch con init statement</span>
-<span class="text-go-accent">switch</span> os := runtime.GOOS; os {
-<span class="text-go-accent">case</span> <span class="text-go-success">"linux"</span>:
-    fmt.Println(<span class="text-go-success">"Linux!"</span>)
-<span class="text-go-accent">case</span> <span class="text-go-success">"darwin"</span>:
-    fmt.Println(<span class="text-go-success">"macOS!"</span>)
 }</code></pre>`}
+    <div class="bg-go-accent/5 border border-go-accent/20 rounded-lg p-3 mt-3">
+      <p class="text-go-accent font-semibold text-sm mb-1">Switch sin expresión</p>
+      <p class="text-go-muted text-sm">
+        Un <code class="text-go-accent">switch</code> sin expresión equivale a <code class="text-go-accent">switch true</code>.
+        Cada case se evalúa como un booleano. Es una alternativa más legible a cadenas largas de if/else if.
+      </p>
+    </div>
   </section>
 
   <!-- Defer -->
   <section class="card mb-6">
-    <h2 class="text-xl font-bold mb-3">defer: Ejecucion Diferida</h2>
+    <h2 class="text-xl font-bold mb-3">defer: Ejecución Diferida (LIFO)</h2>
     <p class="text-go-muted leading-relaxed mb-4">
-      <code class="text-go-accent">defer</code> programa una funcion para ejecutarse cuando la funcion
-      contenedora retorna. Los defers se apilan en orden <strong class="text-go-text">LIFO</strong>
-      (Last In, First Out) - como una pila de platos.
+      <code class="text-go-accent">defer</code> programa una función para ejecutarse cuando la función contenedora
+      retorna. Los defers se apilan en orden <strong class="text-go-text">LIFO</strong> (Last In, First Out).
+      Piensa en una pila de platos: el último que pones es el primero que sacas.
     </p>
-    {@html `<pre class="bg-go-darker rounded-lg p-4 font-mono text-sm overflow-x-auto"><code><span class="text-go-accent">func</span> <span class="text-go-warning">procesarArchivo</span>() {
+    {@html `<pre class="bg-go-darker rounded-lg p-4 font-mono text-sm overflow-x-auto mb-4"><code><span class="text-go-accent">func</span> <span class="text-go-warning">procesarArchivo</span>() {
     f, err := os.Open(<span class="text-go-success">"datos.txt"</span>)
     <span class="text-go-accent">if</span> err != <span class="text-go-accent">nil</span> {
         log.Fatal(err)
     }
-    <span class="text-go-accent">defer</span> f.Close()  <span class="text-go-muted">// Se cierra al salir de la funcion</span>
+    <span class="text-go-accent">defer</span> f.Close()  <span class="text-go-muted">// Se cierra al salir, sin importar cómo</span>
 
     <span class="text-go-muted">// ... trabajar con el archivo ...</span>
-    <span class="text-go-muted">// No importa como salgas: return, panic, o fin normal</span>
-    <span class="text-go-muted">// f.Close() SIEMPRE se ejecuta</span>
-}
-
-<span class="text-go-muted">// Orden LIFO:</span>
-<span class="text-go-accent">defer</span> fmt.Println(<span class="text-go-success">"1"</span>)  <span class="text-go-muted">// Se ejecuta tercero</span>
-<span class="text-go-accent">defer</span> fmt.Println(<span class="text-go-success">"2"</span>)  <span class="text-go-muted">// Se ejecuta segundo</span>
-<span class="text-go-accent">defer</span> fmt.Println(<span class="text-go-success">"3"</span>)  <span class="text-go-muted">// Se ejecuta primero</span>
-<span class="text-go-muted">// Output: 3, 2, 1</span></code></pre>`}
-    <div class="bg-go-darker rounded-lg p-4 border-l-4 border-go-success mt-4">
-      <p class="text-go-success font-semibold text-sm mb-1">Uso clasico</p>
+    <span class="text-go-muted">// f.Close() SIEMPRE se ejecuta: return, panic, fin normal</span>
+}</code></pre>`}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+      <div class="bg-go-darker rounded-lg p-3">
+        <p class="text-go-success font-semibold text-sm mb-1">Usos comunes</p>
+        <ul class="text-go-muted text-sm space-y-1">
+          <li>&#8226; Cerrar archivos y conexiones</li>
+          <li>&#8226; Desbloquear mutexes</li>
+          <li>&#8226; Cleanup de recursos</li>
+        </ul>
+      </div>
+      <div class="bg-go-darker rounded-lg p-3">
+        <p class="text-go-danger font-semibold text-sm mb-1">Cuidado</p>
+        <ul class="text-go-muted text-sm space-y-1">
+          <li>&#8226; Los argumentos se evalúan al registrar, no al ejecutar</li>
+          <li>&#8226; defer en loops puede acumular muchos defers</li>
+          <li>&#8226; Se ejecuta al salir de la <em>función</em>, no del bloque</li>
+        </ul>
+      </div>
+    </div>
+    <div class="bg-go-warning/5 border border-go-warning/20 rounded-lg p-3 mt-4">
+      <p class="text-go-warning font-semibold text-sm mb-1">Trampa sutil: argumentos de defer</p>
       <p class="text-go-muted text-sm">
-        defer se usa para liberar recursos: cerrar archivos, conexiones de BD, desbloquear mutexes.
-        Garantiza la limpieza sin importar como termine la funcion.
+        Los argumentos de defer se evalúan inmediatamente:
+        <code class="text-go-accent">valor := "inicio"; defer fmt.Println(valor); valor = "final"</code>
+        imprime <strong class="text-go-text">"inicio"</strong>, no "final". El valor se captura al momento del defer.
       </p>
+    </div>
+  </section>
+
+  <!-- Worked Examples -->
+  <section class="mb-6">
+    <h2 class="text-xl font-bold mb-4">Ejemplos Guiados</h2>
+    <p class="text-go-muted mb-4">
+      Sigue paso a paso cómo funciona el for en sus múltiples formas y cómo se comporta defer con su orden LIFO.
+    </p>
+    <div class="space-y-6">
+      {#each workedExamples as we}
+        <WorkedExample
+          title={we.title}
+          description={we.description}
+          steps={we.steps}
+          playground={we.playground}
+          playgroundCode={we.playgroundCode}
+        />
+      {/each}
     </div>
   </section>
 
@@ -282,12 +356,26 @@ func main() {
     <h2 class="text-xl font-bold mb-3">Experimenta con Control de Flujo</h2>
     <p class="text-go-muted mb-4">
       Prueba las variaciones de for, observa el orden LIFO de defer y experimenta con switch.
+      Intenta usar <code class="text-go-accent">range 10</code> para probar la sintaxis de Go 1.22+.
     </p>
     <GoPlayground
       code={playgroundCode}
       title="Control de Flujo en Go"
-      description="Ejecuta el codigo y observa especialmente el orden de los defer. Prueba agregar mas variaciones de for."
+      description="Ejecuta el código y observa especialmente el orden de los defer. Prueba agregar más variaciones de for."
     />
+  </section>
+
+  <!-- Code Challenges -->
+  <section class="mb-6">
+    <h2 class="text-xl font-bold mb-4">Desafíos de Código</h2>
+    <p class="text-go-muted mb-4">
+      Practica if con init statements, switch, for con range, y defer. Incluye el nuevo range over integers de Go 1.22+.
+    </p>
+    <div class="space-y-6">
+      {#each exercises as exercise}
+        <CodeChallenge {exercise} onComplete={(id, score, hints) => courseStore.completeExercise(id, score, hints)} />
+      {/each}
+    </div>
   </section>
 
   <!-- Quiz -->

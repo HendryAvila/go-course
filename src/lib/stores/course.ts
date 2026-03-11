@@ -1,5 +1,6 @@
 import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
+import type { ExerciseProgress, LeitnerBox, LeitnerCardState } from '$lib/data/exercises/types';
 
 export interface ModuleProgress {
   completed: boolean;
@@ -25,6 +26,10 @@ export interface CourseState {
   vocabularyDismissed: string[];
   userName: string;
   startedAt: string;
+  /** Per-exercise progress tracking */
+  exercises: Record<string, ExerciseProgress>;
+  /** Leitner box state for spaced repetition review cards */
+  reviewCards: Record<string, LeitnerCardState>;
 }
 
 const STORAGE_KEY = 'go-course-progress';
@@ -39,21 +44,16 @@ export const allBadges: Badge[] = [
   { id: 'struct-architect', name: 'Struct Architect', icon: '🏗️', description: 'Diseñas structs como un arquitecto' },
   { id: 'interface-guru', name: 'Interface Guru', icon: '🧘', description: 'Las interfaces implícitas son tu superpoder' },
   { id: 'error-handler', name: 'Error Handler', icon: '🛡️', description: 'Manejas errores como valores, no excepciones' },
+  { id: 'paquetero', name: 'Paquetero', icon: '📁', description: 'Dominaste paquetes, módulos y tooling de Go' },
   { id: 'gopher-concurrente', name: 'Gopher Concurrente', icon: '⚡', description: 'Goroutines y channels son tu playground' },
+  { id: 'concurrencia-pro', name: 'Concurrencia Pro', icon: '🧬', description: 'Dominaste patrones avanzados de concurrencia' },
+  { id: 'debug-master', name: 'Debug Master', icon: '🔍', description: 'Completaste 10 ejercicios de debugging' },
+  { id: 'code-challenger', name: 'Code Challenger', icon: '💻', description: 'Completaste todos los CodeChallenges de un módulo' },
+  { id: 'streak-3', name: 'Racha de 3', icon: '🔥', description: 'Completaste 3 módulos consecutivos con score perfecto en quiz' },
   { id: 'go-master', name: 'Go Master', icon: '🏆', description: 'Completaste todos los módulos. Eres un Go Master!' },
 ];
 
-function getInitialState(): CourseState {
-  if (browser) {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        // corrupted data, start fresh
-      }
-    }
-  }
+function freshState(): CourseState {
   return {
     currentModule: 1,
     modules: {},
@@ -62,7 +62,28 @@ function getInitialState(): CourseState {
     vocabularyDismissed: [],
     userName: '',
     startedAt: new Date().toISOString(),
+    exercises: {},
+    reviewCards: {},
   };
+}
+
+function getInitialState(): CourseState {
+  if (browser) {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Backward compatibility: ensure new fields exist
+        return {
+          ...freshState(),
+          ...parsed,
+        };
+      } catch {
+        // corrupted data, start fresh
+      }
+    }
+  }
+  return freshState();
 }
 
 function createCourseStore() {
@@ -147,16 +168,58 @@ function createCourseStore() {
         return next;
       });
     },
+    completeExercise: (exerciseId: string, score: number, hintsUsed: number) => {
+      update(s => {
+        const existing = s.exercises[exerciseId];
+        // Keep best score across attempts
+        const bestScore = existing ? Math.max(existing.score, score) : score;
+        const next = {
+          ...s,
+          exercises: {
+            ...s.exercises,
+            [exerciseId]: {
+              completed: true,
+              attempts: (existing?.attempts ?? 0) + 1,
+              hintsUsed,
+              score: bestScore,
+              completedAt: new Date().toISOString(),
+            },
+          },
+          totalScore: s.totalScore - (existing?.score ?? 0) + bestScore,
+        };
+        persist(next);
+        return next;
+      });
+    },
+    reviewCard: (cardId: string, correct: boolean, currentModuleId: number) => {
+      update(s => {
+        const existing = s.reviewCards[cardId] ?? {
+          cardId,
+          box: 1 as LeitnerBox,
+          correctStreak: 0,
+        };
+        const newBox: LeitnerBox = correct
+          ? (Math.min(existing.box + 1, 3) as LeitnerBox)
+          : 1;
+        const next = {
+          ...s,
+          reviewCards: {
+            ...s.reviewCards,
+            [cardId]: {
+              cardId,
+              box: newBox,
+              lastReviewed: new Date().toISOString(),
+              lastReviewedAtModule: currentModuleId,
+              correctStreak: correct ? existing.correctStreak + 1 : 0,
+            },
+          },
+        };
+        persist(next);
+        return next;
+      });
+    },
     reset: () => {
-      const fresh: CourseState = {
-        currentModule: 1,
-        modules: {},
-        totalScore: 0,
-        badges: [],
-        vocabularyDismissed: [],
-        userName: '',
-        startedAt: new Date().toISOString(),
-      };
+      const fresh = freshState();
       if (browser) localStorage.removeItem(STORAGE_KEY);
       set(fresh);
     },

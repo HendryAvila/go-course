@@ -1,404 +1,335 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { courseStore, allBadges } from '$lib/stores/course';
   import { modules } from '$lib/data/modules';
   import ModuleNav from '$lib/components/ModuleNav.svelte';
   import SourcesSection from '$lib/components/SourcesSection.svelte';
   import VocabularyFloat from '$lib/components/VocabularyFloat.svelte';
   import BadgeNotification from '$lib/components/BadgeNotification.svelte';
-  import GoPlayground from '$lib/components/GoPlayground.svelte';
   import Quiz from '$lib/components/Quiz.svelte';
+  import GoPlayground from '$lib/components/GoPlayground.svelte';
+  import WorkedExample from '$lib/components/WorkedExample.svelte';
+  import CodeChallenge from '$lib/components/CodeChallenge.svelte';
+  import ReviewCards from '$lib/components/ReviewCards.svelte';
+  import { exercises, workedExamples } from '$lib/data/exercises/module-8';
+  import { reviewCards } from '$lib/data/exercises/review-cards';
 
-  const MODULE_ID = 8;
-  const BADGE_ID = 'error-handler';
-  const mod = modules.find(m => m.id === MODULE_ID)!;
-
-  let quizCompleted = $state(false);
-  let quizScore = $state(0);
-  let quizTotal = $state(0);
+  const module = modules.find(m => m.id === 8)!;
   let showBadge = $state(false);
-  let earnedBadge = $state<typeof allBadges[0] | null>(null);
+  let earnedBadge = $state(allBadges.find(b => b.id === 'error-handler')!);
 
-  onMount(() => {
-    courseStore.startModule(MODULE_ID);
-  });
+  const panicRecoverCode = `package main
 
-  function handleQuizComplete(score: number, total: number) {
-    quizCompleted = true;
-    quizScore = score;
-    quizTotal = total;
-    courseStore.completeModule(MODULE_ID, score, total);
-    const badge = allBadges.find(b => b.id === BADGE_ID);
-    if (badge) {
-      courseStore.unlockBadge(BADGE_ID);
-      earnedBadge = badge;
-      showBadge = true;
-    }
-  }
+import "fmt"
 
-  const playgroundCode = `package main
-
-import (
-\t"errors"
-\t"fmt"
-)
-
-// --- Error personalizado ---
-type ValidationError struct {
-\tField   string
-\tMessage string
-}
-
-func (e *ValidationError) Error() string {
-\treturn fmt.Sprintf("campo '%s': %s", e.Field, e.Message)
-}
-
-// --- Sentinel errors ---
-var (
-\tErrNotFound     = errors.New("recurso no encontrado")
-\tErrUnauthorized = errors.New("no autorizado")
-)
-
-// --- Funciones que retornan errores ---
-func findUser(id int) (string, error) {
-\tif id <= 0 {
-\t\treturn "", &ValidationError{
-\t\t\tField:   "id",
-\t\t\tMessage: "debe ser mayor a 0",
+func arriesgado() {
+\tdefer func() {
+\t\tif r := recover(); r != nil {
+\t\t\tfmt.Println("Recuperado de panic:", r)
 \t\t}
-\t}
-\tif id > 100 {
-\t\treturn "", ErrNotFound
-\t}
-\treturn "Usuario Go", nil
-}
+\t}()
 
-func getProfile(id int) (string, error) {
-\tuser, err := findUser(id)
-\tif err != nil {
-\t\t// Error wrapping con %w
-\t\treturn "", fmt.Errorf("getProfile(id=%d): %w", id, err)
-\t}
-\treturn fmt.Sprintf("Perfil de %s", user), nil
+\tfmt.Println("Antes del panic")
+\tpanic("algo terrible pasó")
+\tfmt.Println("Esto nunca se ejecuta")
 }
 
 func main() {
-\t// Caso exitoso
-\tprofile, err := getProfile(42)
-\tif err != nil {
-\t\tfmt.Println("Error:", err)
-\t} else {
-\t\tfmt.Println(profile)
-\t}
-
-\t// Caso: error de validacion
-\t_, err = getProfile(-1)
-\tif err != nil {
-\t\tfmt.Println("\\nError:", err)
-
-\t\t// errors.As: extraer tipo concreto del error
-\t\tvar valErr *ValidationError
-\t\tif errors.As(err, &valErr) {
-\t\t\tfmt.Printf("  -> Campo: %s, Detalle: %s\\n", valErr.Field, valErr.Message)
-\t\t}
-\t}
-
-\t// Caso: sentinel error
-\t_, err = getProfile(999)
-\tif err != nil {
-\t\tfmt.Println("\\nError:", err)
-
-\t\t// errors.Is: comparar con sentinel (funciona a traves de wrapping)
-\t\tif errors.Is(err, ErrNotFound) {
-\t\t\tfmt.Println("  -> Es un error de 'no encontrado'")
-\t\t}
-\t}
+\tarriesgado()
+\tfmt.Println("El programa sigue ejecutándose")
 }`;
 
   const quizQuestions = [
     {
-      question: 'La interfaz error en Go tiene:',
+      question: '¿Cuál es la interfaz que define un error en Go?',
       options: [
-        { text: 'Dos metodos: Error() string y Code() int', correct: false, explanation: 'La interfaz error solo tiene un metodo: Error() string. Si necesitas codigos, crea un tipo personalizado.' },
-        { text: 'Un solo metodo: Error() string', correct: true, explanation: 'Correcto. La interfaz error es minimalista: solo requiere Error() string. Cualquier tipo que lo implemente es un error.' },
-        { text: 'Tres metodos: Error(), Unwrap() y Is()', correct: false, explanation: 'Unwrap() e Is() son metodos opcionales para error wrapping, pero no forman parte de la interfaz error basica.' },
-        { text: 'Ningun metodo, es una interfaz vacia', correct: false, explanation: 'No, error tiene un metodo requerido: Error() string. No es interface{}.' },
+        { text: 'type error interface { Msg() string }', correct: false, explanation: 'El método se llama Error(), no Msg().' },
+        { text: 'type error interface { Error() string }', correct: true, explanation: '¡Correcto! La interfaz error es minimalista: un solo método Error() string. Cualquier tipo que lo implemente es un error.' },
+        { text: 'type Error interface { String() string }', correct: false, explanation: 'La interfaz se llama "error" (minúscula) y el método es Error(), no String().' },
+        { text: 'No existe una interfaz, error es un tipo primitivo', correct: false, explanation: 'error es una interfaz definida en el builtin package. Cualquier tipo puede implementarla.' },
       ],
+      source: 'Go Specification',
+      sourceUrl: 'https://go.dev/ref/spec#Errors',
     },
     {
-      question: 'Que hace el verbo %w en fmt.Errorf?',
+      question: '¿Qué hace fmt.Errorf con el verbo %w?',
       options: [
-        { text: 'Formatea el error como warning en lugar de error', correct: false, explanation: '%w no tiene que ver con severity. Es para envolver (wrap) errores.' },
-        { text: 'Envuelve (wraps) el error original para que errors.Is y errors.As puedan encontrarlo', correct: true, explanation: 'Correcto. fmt.Errorf("contexto: %w", err) crea un error que contiene al original. errors.Is/As pueden "desenvoverlo" para inspeccionar la cadena.' },
-        { text: 'Imprime el error en formato ancho (wide)', correct: false, explanation: 'No existe el formato "wide". %w es exclusivo para error wrapping.' },
-        { text: 'Convierte el error a un tipo personalizado', correct: false, explanation: '%w envuelve el error, no lo convierte. El error original se mantiene accesible via Unwrap().' },
+        { text: 'Imprime el error en formato ancho (wide)', correct: false, explanation: '%w no es un formato de impresión. Es para envolver errores.' },
+        { text: 'Envuelve (wraps) el error original para que errors.Is/As puedan encontrarlo', correct: true, explanation: '¡Correcto! %w crea una cadena de errores. errors.Is y errors.As pueden recorrer toda la cadena para encontrar la causa raiz.' },
+        { text: 'Convierte el error a warning', correct: false, explanation: 'Go no tiene concepto de warnings. %w envuelve el error manteniendo la cadena.' },
+        { text: 'Es equivalente a %v para errores', correct: false, explanation: '%v solo formatea el texto. %w además envuelve el error para la cadena de errores.' },
       ],
+      source: 'Go Blog: Errors in Go 1.13',
+      sourceUrl: 'https://go.dev/blog/go1.13-errors',
     },
     {
-      question: 'Cual es la diferencia entre errors.Is y errors.As?',
+      question: '¿Cuál es la diferencia entre errors.Is y errors.As?',
       options: [
-        { text: 'Son lo mismo, solo cambia la sintaxis', correct: false, explanation: 'Son diferentes. Is compara identidad, As extrae un tipo concreto.' },
-        { text: 'errors.Is compara con un valor especifico (sentinel), errors.As extrae un error de un tipo concreto', correct: true, explanation: 'Correcto. Is es para sentinels: errors.Is(err, ErrNotFound). As es para tipos: errors.As(err, &myErr). Ambos recorren la cadena de wrapping.' },
-        { text: 'errors.Is funciona con strings, errors.As funciona con structs', correct: false, explanation: 'errors.Is compara con cualquier valor error, no solo strings. errors.As extrae cualquier tipo que implemente error.' },
-        { text: 'errors.Is es para errores de Go 1.13+, errors.As es para versiones anteriores', correct: false, explanation: 'Ambos fueron introducidos en Go 1.13 juntos.' },
+        { text: 'Son lo mismo con diferente nombre', correct: false, explanation: 'Hacen cosas muy distintas: Is compara, As extrae.' },
+        { text: 'Is compara identidad del error, As extrae el tipo concreto del error', correct: true, explanation: '¡Correcto! errors.Is(err, target) pregunta "¿es este error target?" recorriendo la cadena. errors.As(err, &target) extrae el error a un tipo concreto para acceder a sus campos.' },
+        { text: 'Is es para errores nuevos, As para errores wrapped', correct: false, explanation: 'Ambos recorren la cadena de wrapping. Is compara valor, As extrae tipo.' },
+        { text: 'Is retorna string, As retorna bool', correct: false, explanation: 'Ambos retornan bool. As además asigna el error al target si lo encuentra.' },
       ],
+      source: 'Go Blog: Errors in Go 1.13',
+      sourceUrl: 'https://go.dev/blog/go1.13-errors',
     },
     {
-      question: 'Cuando es apropiado usar panic en Go?',
+      question: '¿Cuándo es apropiado usar panic() en Go?',
       options: [
-        { text: 'Para cualquier error que no se pueda manejar', correct: false, explanation: 'En Go, los errores se retornan como valores. panic es para situaciones verdaderamente irrecuperables.' },
-        { text: 'Como reemplazo de try/catch para errores comunes', correct: false, explanation: 'Go deliberadamente no tiene try/catch. Los errores se manejan con if err != nil.' },
-        { text: 'Solo para errores de programacion irrecuperables (bugs), no para errores de runtime esperados', correct: true, explanation: 'Correcto. panic es para bugs como index out of bounds, nil pointer, o invariantes violados. Errores de I/O, red, validacion, etc. se manejan con error.' },
-        { text: 'Siempre que quieras detener la ejecucion', correct: false, explanation: 'Para detener la ejecucion normalmente usas os.Exit() o log.Fatal(). panic es para bugs irrecuperables.' },
+        { text: 'Para cualquier error — reemplaza a try/catch', correct: false, explanation: 'Go usa retorno de errores, no panic, para el flujo normal. panic es excepcional.' },
+        { text: 'Solo para errores del programador: invariantes rotos, bugs, inicialización fallida', correct: true, explanation: '¡Correcto! panic es para situaciones irrecuperables: nil dereference, indice fuera de rango, configuración faltante al startup. Para errores esperados, siempre retorna error.' },
+        { text: 'Nunca — panic no se usa en Go', correct: false, explanation: 'Se usa en casos específicos: regexp.MustCompile, template.Must, init(). Pero es raro.' },
+        { text: 'En cada función que puede fallar', correct: false, explanation: 'Eso sería un anti-patrón grave. Go favorece retornar errores explícitamente.' },
       ],
+      source: 'Effective Go',
+      sourceUrl: 'https://go.dev/doc/effective_go#panic',
     },
     {
-      question: 'Que son los sentinel errors en Go?',
+      question: '¿Qué patrón resuelve el problema de perder errores de defer?',
       options: [
-        { text: 'Errores que se crean con errors.New() como variables de paquete para comparar con errors.Is()', correct: true, explanation: 'Correcto. Sentinel errors como io.EOF o sql.ErrNoRows son variables de paquete predefinidas. Se comparan con errors.Is() a traves de cadenas de wrapping.' },
-        { text: 'Errores que automáticamente detienen el programa', correct: false, explanation: 'Los sentinel errors son valores normales. No detienen nada, se comparan con errors.Is().' },
-        { text: 'Errores que solo se usan en testing', correct: false, explanation: 'Los sentinel errors se usan en codigo de produccion. io.EOF es un ejemplo clasico.' },
-        { text: 'Errores con un codigo numerico especial', correct: false, explanation: 'Los sentinel errors no tienen codigos numericos. Son instancias de error para comparar por identidad.' },
+        { text: 'Usar try/finally', correct: false, explanation: 'Go no tiene try/finally. Usa defer con named returns.' },
+        { text: 'Named return + defer con closure que captura el error', correct: true, explanation: '¡Correcto! func f() (retErr error) { defer func() { cerr := cleanup(); if retErr == nil { retErr = cerr } }() }' },
+        { text: 'Ignorar el error de defer, nunca es importante', correct: false, explanation: 'Los errores de cierre (flush a disco, cerrar conexión) pueden perder datos. Son importantes.' },
+        { text: 'Usar log.Fatal en el defer', correct: false, explanation: 'log.Fatal termina el programa. No es una solución — es esconder el problema.' },
       ],
+      source: 'Go Blog: Error handling',
+      sourceUrl: 'https://go.dev/blog/error-handling-and-go',
     },
   ];
+
+  function handleQuizComplete(score: number, total: number) {
+    courseStore.completeModule(8, score, total);
+    if (score >= 3) {
+      courseStore.unlockBadge('error-handler');
+      showBadge = true;
+    }
+  }
 </script>
 
 <svelte:head>
-  <title>Modulo 8: {mod.title} | Go Mastery</title>
+  <title>{module.title} | Curso de Go</title>
 </svelte:head>
 
-<div class="max-w-4xl mx-auto px-4 py-8">
-  <!-- Header -->
+<div class="max-w-3xl mx-auto">
   <div class="mb-8">
-    <div class="flex items-center gap-3 mb-2">
-      <span class="text-3xl">{mod.icon}</span>
-      <div>
-        <p class="text-sm text-go-accent font-mono">Modulo {MODULE_ID}</p>
-        <h1 class="text-3xl font-black">{mod.title}</h1>
-      </div>
-    </div>
-    <p class="text-go-muted mt-2">{mod.subtitle}</p>
+    <span class="text-4xl">{module.icon}</span>
+    <h1 class="text-3xl font-bold mt-2">{module.title}</h1>
+    <p class="text-go-muted mt-1">{module.subtitle}</p>
   </div>
 
-  <!-- Teoria: La interfaz error -->
-  <section class="prose-section mb-8">
-    <h2 class="text-xl font-bold text-go-accent mb-4">La interfaz error</h2>
-    <p class="text-go-muted mb-4">
-      En Go, un error es simplemente un valor que implementa la interfaz <code>error</code>.
-      No hay excepciones, no hay try/catch. Los errores se <strong class="text-go-text">retornan</strong> como
-      valores y se manejan <strong class="text-go-text">explicitamente</strong>.
+  <!-- Repaso Espaciado -->
+  <ReviewCards moduleId={8} cards={reviewCards} />
+
+  <!-- Intro: No try/catch -->
+  <section class="card mb-6">
+    <h2 class="text-xl font-bold mb-3">Go no tiene try/catch — y eso es BUENO</h2>
+    <p class="text-go-muted leading-relaxed mb-4">
+      En Java, Python o JavaScript, los errores "vuelan" por el stack como excepciones invisibles.
+      Puedes olvidar el catch y tu programa explota en producción.
     </p>
-    <div class="bg-go-dark rounded-lg p-4 mb-4 overflow-x-auto">
-      <pre class="text-sm font-mono text-go-text">{@html `<span class="text-go-muted">// La interfaz error es increiblemente simple</span>
-<span class="text-go-accent">type</span> error <span class="text-go-accent">interface</span> {
+    <p class="text-go-muted leading-relaxed mb-4">
+      En Go, los errores son <strong class="text-go-accent">valores</strong>. Se retornan explícitamente
+      y se manejan donde ocurren. No hay magia, no hay sorpresas.
+    </p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+      <div class="bg-go-danger/10 border border-go-danger/30 rounded-lg p-3">
+        <p class="text-go-danger font-semibold text-sm mb-2">Anti-patron (otros lenguajes)</p>
+        {@html `<pre class="font-mono text-xs"><code><span class="text-go-muted">// El error puede pasar desapercibido</span>
+<span class="text-go-danger">try</span> {
+    resultado = arriesgar()
+} <span class="text-go-danger">catch</span> (e) {
+    <span class="text-go-muted">// ¿Qué tipo de error? ¿Quién sabe?</span>
+    log(e)
+}</code></pre>`}
+      </div>
+      <div class="bg-go-success/10 border border-go-success/30 rounded-lg p-3">
+        <p class="text-go-success font-semibold text-sm mb-2">Patron idiomatico Go</p>
+        {@html `<pre class="font-mono text-xs"><code>resultado, err := arriesgar()
+<span class="text-go-accent">if</span> err != <span class="text-go-accent">nil</span> {
+    <span class="text-go-muted">// Explícito: sabes QUÉ falló</span>
+    <span class="text-go-accent">return</span> fmt.Errorf(<span class="text-go-success">"contexto: %w"</span>, err)
+}
+<span class="text-go-muted">// Continuar con confianza</span></code></pre>`}
+      </div>
+    </div>
+  </section>
+
+  <!-- La interfaz error -->
+  <section class="card mb-6">
+    <h2 class="text-xl font-bold mb-3">La Interfaz error: Minimalismo Puro</h2>
+    <p class="text-go-muted leading-relaxed mb-4">
+      La interfaz <code class="text-go-accent">error</code> de Go es una de las más simples del lenguaje:
+    </p>
+    {@html `<pre class="bg-go-darker rounded-lg p-4 font-mono text-sm overflow-x-auto mb-4"><code><span class="text-go-accent">type</span> <span class="text-go-warning">error</span> <span class="text-go-accent">interface</span> {
     Error() <span class="text-go-accent">string</span>
 }
 
 <span class="text-go-muted">// Crear errores simples</span>
-err1 := errors.New("algo salio mal")
-err2 := fmt.Errorf("usuario %d no encontrado", 42)`}</pre>
+err1 := errors.New(<span class="text-go-success">"algo falló"</span>)
+err2 := fmt.Errorf(<span class="text-go-success">"usuario %d no encontrado"</span>, 42)
+
+<span class="text-go-muted">// El patrón universal</span>
+<span class="text-go-accent">if</span> err != <span class="text-go-accent">nil</span> {
+    <span class="text-go-muted">// manejar el error</span>
+}</code></pre>`}
+    <p class="text-go-muted text-sm">
+      <code class="text-go-accent">errors.New</code> crea errores simples.
+      <code class="text-go-accent">fmt.Errorf</code> permite formato con contexto.
+      Cualquier tipo con el método <code>Error() string</code> es un error válido.
+    </p>
+  </section>
+
+  <!-- Error Wrapping -->
+  <section class="card mb-6">
+    <h2 class="text-xl font-bold mb-3">Error Wrapping: Contexto sin Perder la Causa</h2>
+    <p class="text-go-muted leading-relaxed mb-4">
+      Cuando un error sube por las capas de tu aplicación, necesitas agregar contexto
+      <strong class="text-go-text">sin perder la causa raíz</strong>. El verbo <code class="text-go-accent">%w</code>
+      hace exactamente eso:
+    </p>
+    {@html `<pre class="bg-go-darker rounded-lg p-4 font-mono text-sm overflow-x-auto mb-4"><code><span class="text-go-muted">// Capa 1: error original</span>
+<span class="text-go-accent">var</span> ErrNoEncontrado = errors.New(<span class="text-go-success">"no encontrado"</span>)
+
+<span class="text-go-muted">// Capa 2: agrega contexto con %w</span>
+<span class="text-go-accent">return</span> fmt.Errorf(<span class="text-go-success">"buscarUsuario(id=%d): %w"</span>, id, ErrNoEncontrado)
+
+<span class="text-go-muted">// Capa 3: más contexto</span>
+<span class="text-go-accent">return</span> fmt.Errorf(<span class="text-go-success">"cargarPerfil: %w"</span>, err)
+
+<span class="text-go-muted">// Resultado: "cargarPerfil: buscarUsuario(id=42): no encontrado"</span>
+<span class="text-go-muted">// Y errors.Is(err, ErrNoEncontrado) == true ¡atraviesa toda la cadena!</span></code></pre>`}
+    <div class="bg-go-darker rounded-lg p-4 mt-3">
+      <p class="text-go-accent font-semibold text-sm mb-2">errors.Is vs errors.As</p>
+      <ul class="space-y-2 text-go-muted text-sm">
+        <li>&#8226; <code class="text-go-accent">errors.Is(err, target)</code> — Pregunta: "¿Es este error (o alguno en la cadena) igual a target?"</li>
+        <li>&#8226; <code class="text-go-accent">errors.As(err, &target)</code> — Pregunta: "¿Hay un error de tipo T en la cadena?" y lo extrae</li>
+      </ul>
     </div>
   </section>
 
-  <!-- Teoria: if err != nil -->
-  <section class="prose-section mb-8">
-    <h2 class="text-xl font-bold text-go-accent mb-4">El patron if err != nil</h2>
-    <p class="text-go-muted mb-4">
-      Este es el patron mas comun en Go. Las funciones retornan el error como ultimo valor, y el caller lo verifica
-      inmediatamente. Si, vas a escribir <code>if err != nil</code> muchas veces. Eso es intencional: te obliga a
-      <strong class="text-go-text">pensar en cada error</strong>.
+  <!-- Custom Error Types -->
+  <section class="card mb-6">
+    <h2 class="text-xl font-bold mb-3">Errores Personalizados con Datos Estructurados</h2>
+    <p class="text-go-muted leading-relaxed mb-4">
+      A veces un string no es suficiente. Necesitas errores con <strong class="text-go-text">datos estructurados</strong>:
+      un código HTTP, un campo de validación, un ID de recurso.
     </p>
-    <div class="bg-go-dark rounded-lg p-4 mb-4 overflow-x-auto">
-      <pre class="text-sm font-mono text-go-text">{@html `<span class="text-go-accent">func</span> ReadFile(path <span class="text-go-accent">string</span>) ([]<span class="text-go-accent">byte</span>, <span class="text-go-accent">error</span>) {
-    data, err := os.ReadFile(path)
-    <span class="text-go-accent">if</span> err != nil {
-        <span class="text-go-accent">return</span> nil, fmt.Errorf("leyendo %s: %w", path, err)
-    }
-    <span class="text-go-accent">return</span> data, nil
+    {@html `<pre class="bg-go-darker rounded-lg p-4 font-mono text-sm overflow-x-auto mb-4"><code><span class="text-go-accent">type</span> <span class="text-go-warning">ErrorValidacion</span> <span class="text-go-accent">struct</span> {
+    Campo   <span class="text-go-accent">string</span>
+    Mensaje <span class="text-go-accent">string</span>
 }
 
-<span class="text-go-muted">// Uso</span>
-data, err := ReadFile("config.json")
-<span class="text-go-accent">if</span> err != nil {
-    log.Fatal(err)  <span class="text-go-muted">// o manejar de otra forma</span>
+<span class="text-go-muted">// Implementar la interfaz error</span>
+<span class="text-go-accent">func</span> (e *ErrorValidacion) <span class="text-go-warning">Error</span>() <span class="text-go-accent">string</span> {
+    <span class="text-go-accent">return</span> fmt.Sprintf(<span class="text-go-success">"validación en '%s': %s"</span>, e.Campo, e.Mensaje)
 }
-<span class="text-go-muted">// usar data aqui...</span>`}</pre>
-    </div>
-    <div class="bg-yellow-900/20 border border-yellow-700/30 rounded-lg p-3 mb-4">
-      <p class="text-yellow-300 text-sm font-bold">No ignores errores:</p>
-      <p class="text-go-muted text-sm">
-        Escribir <code>result, _ := puedefallar()</code> es una bomba de tiempo. Siempre maneja o propaga el error.
+
+<span class="text-go-muted">// Usar con errors.As para extraer los datos</span>
+<span class="text-go-accent">var</span> ve *ErrorValidacion
+<span class="text-go-accent">if</span> errors.As(err, &ve) {
+    fmt.Printf(<span class="text-go-success">"Campo: %s, Detalle: %s\\n"</span>, ve.Campo, ve.Mensaje)
+}</code></pre>`}
+    <div class="bg-go-warning/10 border border-go-warning/30 rounded-lg p-3 mt-3">
+      <p class="text-go-warning font-semibold text-sm mb-1">Truco importante</p>
+      <p class="text-sm text-go-muted">
+        Si retornas <code class="text-go-accent">&ErrorValidacion{'{'}'...{'}'}</code> (puntero),
+        entonces <code>errors.As</code> necesita <code class="text-go-accent">var ve *ErrorValidacion</code> (puntero).
+        Los tipos deben coincidir.
       </p>
     </div>
   </section>
 
-  <!-- Teoria: Errores personalizados -->
-  <section class="prose-section mb-8">
-    <h2 class="text-xl font-bold text-go-accent mb-4">Errores personalizados</h2>
-    <p class="text-go-muted mb-4">
-      Puedes crear tus propios tipos de error implementando la interfaz <code>error</code>. Esto te permite
-      incluir contexto adicional como campos, codigos HTTP, o metadata.
+  <!-- panic/recover -->
+  <section class="card mb-6">
+    <h2 class="text-xl font-bold mb-3">panic y recover: Solo para Emergencias</h2>
+    <p class="text-go-muted leading-relaxed mb-4">
+      <code class="text-go-danger">panic</code> termina la ejecución del programa (subiendo el stack y ejecutando defers).
+      <code class="text-go-accent">recover</code> lo intercepta dentro de un defer. Pero:
     </p>
-    <div class="bg-go-dark rounded-lg p-4 mb-4 overflow-x-auto">
-      <pre class="text-sm font-mono text-go-text">{@html `<span class="text-go-accent">type</span> NotFoundError <span class="text-go-accent">struct</span> {
-    Resource <span class="text-go-accent">string</span>
-    ID       <span class="text-go-accent">int</span>
-}
-
-<span class="text-go-accent">func</span> (e *NotFoundError) Error() <span class="text-go-accent">string</span> {
-    <span class="text-go-accent">return</span> fmt.Sprintf("%s con id %d no encontrado", e.Resource, e.ID)
-}
-
-<span class="text-go-muted">// Uso</span>
-<span class="text-go-accent">func</span> FindUser(id <span class="text-go-accent">int</span>) (*User, <span class="text-go-accent">error</span>) {
-    <span class="text-go-muted">// ...</span>
-    <span class="text-go-accent">return</span> nil, &amp;NotFoundError{Resource: "usuario", ID: id}
-}`}</pre>
-    </div>
-  </section>
-
-  <!-- Teoria: Error wrapping -->
-  <section class="prose-section mb-8">
-    <h2 class="text-xl font-bold text-go-accent mb-4">Error Wrapping con %w</h2>
-    <p class="text-go-muted mb-4">
-      Desde Go 1.13, puedes <strong class="text-go-text">envolver</strong> errores con <code>fmt.Errorf</code> y el verbo
-      <code>%w</code>. Esto crea una cadena de errores que agrega contexto sin perder el error original.
-    </p>
-    <div class="bg-go-dark rounded-lg p-4 mb-4 overflow-x-auto">
-      <pre class="text-sm font-mono text-go-text">{@html `<span class="text-go-muted">// Envolver agrega contexto</span>
-<span class="text-go-accent">func</span> GetUserProfile(id <span class="text-go-accent">int</span>) (*Profile, <span class="text-go-accent">error</span>) {
-    user, err := FindUser(id)
-    <span class="text-go-accent">if</span> err != nil {
-        <span class="text-go-accent">return</span> nil, fmt.Errorf("obteniendo perfil: %w", err)
-    }
-    <span class="text-go-muted">// ...</span>
-}
-
-<span class="text-go-muted">// El error resultante contiene toda la cadena:</span>
-<span class="text-go-muted">// "obteniendo perfil: usuario con id 42 no encontrado"</span>`}</pre>
-    </div>
-
-    <h3 class="text-lg font-bold text-go-text mb-3">errors.Is y errors.As</h3>
-    <p class="text-go-muted mb-4">
-      Para inspeccionar errores a traves de cadenas de wrapping, usa <code>errors.Is</code> (comparar con sentinel) y
-      <code>errors.As</code> (extraer tipo concreto):
-    </p>
-    <div class="bg-go-dark rounded-lg p-4 mb-4 overflow-x-auto">
-      <pre class="text-sm font-mono text-go-text">{@html `<span class="text-go-muted">// errors.Is: busca un error especifico en la cadena</span>
-<span class="text-go-accent">if</span> errors.Is(err, ErrNotFound) {
-    <span class="text-go-muted">// manejar "no encontrado"</span>
-}
-
-<span class="text-go-muted">// errors.As: extrae un tipo concreto de la cadena</span>
-<span class="text-go-accent">var</span> nfErr *NotFoundError
-<span class="text-go-accent">if</span> errors.As(err, &amp;nfErr) {
-    fmt.Println("Recurso:", nfErr.Resource)
-    fmt.Println("ID:", nfErr.ID)
-}`}</pre>
-    </div>
-  </section>
-
-  <!-- Teoria: Sentinel errors -->
-  <section class="prose-section mb-8">
-    <h2 class="text-xl font-bold text-go-accent mb-4">Sentinel Errors</h2>
-    <p class="text-go-muted mb-4">
-      Los <strong class="text-go-text">sentinel errors</strong> son variables de paquete predefinidas que representan
-      errores conocidos. Se comparan con <code>errors.Is</code>.
-    </p>
-    <div class="bg-go-dark rounded-lg p-4 mb-4 overflow-x-auto">
-      <pre class="text-sm font-mono text-go-text">{@html `<span class="text-go-muted">// Definir sentinels en tu paquete</span>
-<span class="text-go-accent">var</span> (
-    ErrNotFound     = errors.New("no encontrado")
-    ErrUnauthorized = errors.New("no autorizado")
-    ErrConflict     = errors.New("conflicto de datos")
-)
-
-<span class="text-go-muted">// Sentinels famosos del stdlib</span>
-io.EOF            <span class="text-go-muted">// fin de archivo/stream</span>
-sql.ErrNoRows     <span class="text-go-muted">// query sin resultados</span>
-context.Canceled  <span class="text-go-muted">// contexto cancelado</span>`}</pre>
-    </div>
-  </section>
-
-  <!-- Teoria: panic y recover -->
-  <section class="prose-section mb-8">
-    <h2 class="text-xl font-bold text-go-accent mb-4">panic y recover: Casi nunca los uses</h2>
-    <p class="text-go-muted mb-4">
-      <code>panic</code> detiene la ejecucion del goroutine actual y desenrolla el stack. <code>recover</code> puede
-      capturar un panic dentro de un <code>defer</code>. Pero en Go idiomatico, <strong class="text-go-text">casi nunca se usan</strong>.
-    </p>
-    <div class="bg-go-dark rounded-lg p-4 mb-4 overflow-x-auto">
-      <pre class="text-sm font-mono text-go-text">{@html `<span class="text-go-muted">// panic: solo para bugs irrecuperables</span>
-<span class="text-go-accent">func</span> MustParseTemplate(name <span class="text-go-accent">string</span>) *Template {
-    t, err := template.ParseFiles(name)
-    <span class="text-go-accent">if</span> err != nil {
-        <span class="text-go-accent">panic</span>("template invalido: " + err.Error())
-    }
-    <span class="text-go-accent">return</span> t
-}
-
-<span class="text-go-muted">// recover: capturar panic en un defer</span>
-<span class="text-go-accent">func</span> SafeExecute(f <span class="text-go-accent">func</span>()) (<span class="text-go-accent">err error</span>) {
-    <span class="text-go-accent">defer func</span>() {
-        <span class="text-go-accent">if</span> r := <span class="text-go-accent">recover</span>(); r != nil {
-            err = fmt.Errorf("panic recuperado: %v", r)
-        }
-    }()
-    f()
-    <span class="text-go-accent">return</span> nil
-}`}</pre>
-    </div>
-    <div class="bg-red-900/20 border border-red-700/30 rounded-lg p-3 mb-4">
-      <p class="text-red-300 text-sm font-bold">Regla de oro:</p>
-      <p class="text-go-muted text-sm">
-        Usa <code>panic</code> solo para errores de <strong>programacion</strong> (bugs), nunca para errores de
-        <strong>runtime esperados</strong> (archivo no existe, red caida, input invalido). Esos son <code>error</code>.
+    <div class="bg-go-danger/10 border border-go-danger/30 rounded-lg p-4 mb-4">
+      <p class="text-go-danger font-semibold text-sm mb-2">Regla de oro</p>
+      <p class="text-sm text-go-muted">
+        Si puedes retornar un <code class="text-go-accent">error</code>, hazlo. Usa <code class="text-go-danger">panic</code>
+        solo para bugs del programador (invariantes rotos, nil inesperado) o en funciones <code>Must*</code>
+        que fallan al inicializar.
       </p>
     </div>
-  </section>
-
-  <!-- Playground -->
-  <section class="mb-8">
-    <h2 class="text-xl font-bold text-go-accent mb-4">Playground: Errores en accion</h2>
-    <p class="text-go-muted mb-4">
-      Experimenta con errores personalizados, wrapping con <code>%w</code>, y las funciones <code>errors.Is</code>
-      y <code>errors.As</code>. Intenta modificar el codigo para crear tu propio tipo de error.
-    </p>
     <GoPlayground
-      code={playgroundCode}
-      title="Manejo de Errores"
-      description="Errores personalizados, wrapping, errors.Is y errors.As"
+      code={panicRecoverCode}
+      title="panic y recover"
+      description="Observa cómo recover intercepta el panic y el programa sigue ejecutándose."
     />
   </section>
 
-  <!-- Quiz -->
-  <section class="mb-8">
-    <h2 class="text-xl font-bold text-go-accent mb-4">Quiz: Manejo de Errores</h2>
-    <p class="text-go-muted mb-4">
-      Verifica tu comprension sobre el manejo de errores idiomatico en Go.
+  <!-- defer para cleanup -->
+  <section class="card mb-6">
+    <h2 class="text-xl font-bold mb-3">defer: Tu Red de Seguridad para Cleanup</h2>
+    <p class="text-go-muted leading-relaxed mb-4">
+      <code class="text-go-accent">defer</code> garantiza que el cleanup ocurra <strong class="text-go-text">siempre</strong>,
+      sin importar cómo sale la función (return normal, error, o panic):
     </p>
+    {@html `<pre class="bg-go-darker rounded-lg p-4 font-mono text-sm overflow-x-auto mb-4"><code><span class="text-go-muted">// Patrón idiomático: abrir → verificar → defer cerrar → usar</span>
+conn, err := abrirConexion(<span class="text-go-success">"db"</span>)
+<span class="text-go-accent">if</span> err != <span class="text-go-accent">nil</span> {
+    <span class="text-go-accent">return</span> err
+}
+<span class="text-go-accent">defer</span> conn.Cerrar() <span class="text-go-muted">// Se ejecuta AL SALIR de la función</span>
+
+<span class="text-go-muted">// Usar conn con tranquilidad...</span>
+resultado, err := conn.Consultar(<span class="text-go-success">"SELECT ..."</span>)
+<span class="text-go-muted">// Aunque haya error aquí, conn.Cerrar() se ejecuta</span></code></pre>`}
+    <div class="bg-go-accent/5 border border-go-accent/20 rounded-lg p-3 mt-3">
+      <p class="text-go-accent font-semibold text-sm mb-1">Recuerda</p>
+      <p class="text-sm text-go-muted">
+        Multiples <code class="text-go-accent">defer</code> se apilan en orden <strong>LIFO</strong>
+        (Last In, First Out). El último defer registrado se ejecuta primero.
+      </p>
+    </div>
+  </section>
+
+  <!-- Worked Examples -->
+  <section class="mb-6">
+    <h2 class="text-xl font-bold mb-4">Ejemplos Guiados</h2>
+    {#each workedExamples as we}
+      <div class="mb-6">
+        <WorkedExample
+          title={we.title}
+          description={we.description}
+          steps={we.steps}
+          playground={we.playground}
+          playgroundCode={we.playgroundCode}
+        />
+      </div>
+    {/each}
+  </section>
+
+  <!-- Code Challenges -->
+  <section class="mb-6">
+    <h2 class="text-xl font-bold mb-4">Desafios de Codigo</h2>
+    <p class="text-go-muted mb-4">
+      Practica el manejo de errores con ejercicios progresivos:
+    </p>
+    {#each exercises as exercise}
+      <div class="mb-6">
+        <CodeChallenge
+          {exercise}
+          onComplete={(id, score, hints) => courseStore.completeExercise(id, score, hints)}
+        />
+      </div>
+    {/each}
+  </section>
+
+  <!-- Quiz -->
+  <section class="mb-6">
+    <h2 class="text-xl font-bold mb-4">Pon a Prueba tu Conocimiento</h2>
     <Quiz questions={quizQuestions} onComplete={handleQuizComplete} />
   </section>
 
-  {#if quizCompleted}
-    <div class="bg-go-card border border-go-accent/30 rounded-lg p-4 mb-8 text-center">
-      <p class="text-go-accent font-bold text-lg">Modulo completado</p>
-      <p class="text-go-muted">Obtuviste {quizScore} de {quizTotal} en el quiz.</p>
-    </div>
-  {/if}
-
-  <!-- Sources -->
-  <SourcesSection sources={mod.sources} />
-
-  <!-- Navigation -->
-  <ModuleNav currentModule={MODULE_ID} />
+  <SourcesSection sources={module.sources} />
+  <ModuleNav currentModule={8} />
 </div>
 
-<!-- Vocabulary -->
-<VocabularyFloat moduleId={MODULE_ID} />
+<VocabularyFloat moduleId={8} />
 
-<!-- Badge Notification -->
-{#if showBadge && earnedBadge}
+{#if showBadge}
   <BadgeNotification badge={earnedBadge} onClose={() => showBadge = false} />
 {/if}

@@ -32,6 +32,7 @@ jobs:
       - name: Build
         env:
           BASE_PATH: '/go-course'
+          VITE_GO_COMPILE_PROXY: ${{ vars.VITE_GO_COMPILE_PROXY }}
         run: npm run build
 
       - name: Upload artifact
